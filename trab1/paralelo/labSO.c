@@ -19,10 +19,10 @@
 #define NUM_PRODUTOR 1
 #define NUM_CONSUMIDOR 4
 
-char * senhaAlvo;
-char * buffer[N_ITENS];
-char senha[TAM_SENHA] = "aaaa";
-char * auxiliar;
+char * senhaAlvo; //senha a ser decifrada
+char * buffer[N_ITENS]; //vetor no qual as senhas produzidas ficarão
+char senha[TAM_SENHA] = "aaaa"; //senha inicial de teste
+char * auxiliar; //senha alocada para ser jogada no vetor de produzidas
 
 int inicio = 0, final = 0, cont = 0, encontrada = 0, finalizada = 0;
 

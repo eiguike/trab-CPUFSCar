@@ -23,7 +23,7 @@
 #define NUM_CONSUMIDOR 4
 
 char * senhaAlvo;
-char * buffer[N_ITENS];
+char ** buffer;
 char * senha;
 char * auxiliar;
 
@@ -70,134 +70,74 @@ int testa_senha(const char *hash_alvo, const char *senha) {
 }
 
 void * produtor(void *v) {
+  char ** variavelLocal = NULL;
+  int i;
+  int finalizado;
   do{
+    if(encontrada)
+      return NULL;
 
     // bloqueia o buffer para que o produtor
     // possa gerar mais senhas
     pthread_mutex_lock(&bloqueio);
+    variavelLocal = (char**) malloc(sizeof(char*)*N_ITENS);
 
-    // caso o buffer esteja cheio, esperara o sinal
-    // quando a thread do consumidor consumir.
-    // caso a chave seja encontrada, ela esperara o sinal
-    // e mandara tambÃ©m um sinal para as threads consumidoras,
-    // assim a produtora e as consumidoras podem fechar as threads
-    while (cont == N_ITENS) {
-      pthread_cond_wait(&nao_cheio, &bloqueio);
-      if(encontrada){
-        pthread_cond_wait(&encontrado, &bloqueio);
-        pthread_cond_signal(&nao_vazio);
-        pthread_mutex_unlock(&bloqueio);
-        return NULL;
-      }
-    }
+    for(i=0;i<N_ITENS;i++)
+      variavelLocal[i] = NULL;
 
-    // local aonde se gera as chaves
-    auxiliar = (char*)malloc(sizeof(char)*TAM_SENHA);
+    i = 0;
+    do{
+      // local aonde se gera as chaves
+      auxiliar = (char*)malloc(sizeof(char)*TAM_SENHA);
+      strcpy(auxiliar, senha);
+      variavelLocal[i] = auxiliar;
+      i++;
+    }while((i < N_ITENS)&&(finalizado = incrementa_senha()));
 
-    // guarda as chaves em auxiliar
-    strcpy(auxiliar, senha);
-
-    // limita o buffer para que nÃ£o ultrapasse
-    // o limite decidido pelos #defines
-    final = (final + 1) % N_ITENS;
-
-    // guarda o endereÃ§o de auxiliar
-    buffer[final] = auxiliar;
-
-    // quando Ã© armazenado a nova chave
-    // no contador Ã© adicionado mais um
-    cont += 1;
-
-    // manda um sinal para as threads consumidoras
-    // para que elas possam consumir as chaves
+    pthread_mutex_unlock(&bloqueio);
     pthread_cond_signal(&nao_vazio);
 
-    // desbloqueia o buffer
-    pthread_mutex_unlock(&bloqueio);
-  }while(incrementa_senha());
+    if(!finalizado)
+      return NULL;
 
-  // caso todas as senhas forem geradas
-  // e nÃ£o derem certo a verificaÃ§Ã£o, 
-  // o produtor apenas sairÃ¡
-  finalizada = 1;
-
-  // certifica que todas as senhas geradas
-  // foram verificadas e espera as threads
-  // consumidoras se destruirem.
-  // Ã© enviado o sinal nao_vazio, pois como
-  // o produtor parou de produzir senhas, o cont
-  // ficarÃ¡ como zero, e no produtor, ele acabarÃ¡
-  // sempre entrando no while de (cont == 0)
-  do{
-    pthread_cond_signal(&nao_vazio);
-    pthread_mutex_unlock(&bloqueio);
-  }while(finalizada < 1 + NUM_CONSUMIDOR);
-
-  return NULL;
+  }while(1);
 }
 
 void* consumidor(void *v) {
   // variavel local para que a thread
   // possa trabalhar com ela independentemnete
   // do buffer
-  char * variavelLocal = NULL;
+  char ** variavelLocal2 = NULL;
+  int i;
 
   do{
-    free(variavelLocal);
+    // quando já foi encontrada a chave, é finalizado
+    // thread
+    if(encontrada)
+      return NULL;
 
     // bloqueia o acesso de outras threads
     // no buffer
     pthread_mutex_lock(&bloqueio);
+    variavelLocal2 = buffer;
+    buffer = NULL;
+    cont = 0;
+    pthread_mutex_unlock(&bloqueio);
 
-    // caso o buffer esteja vazio, esperarÃ¡ atÃ©
-    // que o produtor produza algo.
-    // caso jÃ¡ nÃ£o tenho mais senhas para verificar
-    // e o produtor ja tiver finalizado, o consumidor
-    // irÃ¡ enviar um sinal de finalizado e adicionarÃ¡
-    // na variaÇ˜el global finalizada para que o produtor
-    // saiba quantas threads jÃ¡ foram destruÃ­das.
-    while (cont == 0) {
-      pthread_cond_wait(&nao_vazio, &bloqueio);
-      if(finalizada > 0){
-        finalizada++;
-        return NULL;
-      }
-    }
-
-    // caso seja encontrada a senha, essa thread
-    // enviarÃ¡ um sinal para o produtor para que
-    // encerre a produÃ§Ã£o, no final, a thread
-    // Ã© destruÃ­da.
-    if(encontrada){
-      pthread_cond_signal(&nao_cheio);
-      pthread_cond_signal(&encontrado);
-      pthread_mutex_unlock(&bloqueio);
-      return NULL;
-    }
-
-    // permite apenas o acesso do buffer
-    // limitado pelo #define
-    inicio = (inicio + 1) % N_ITENS;
-    variavelLocal = buffer[inicio];
-
-    // diminui o nÃºmero de chaves armazenadas
-    // no buffer
-    cont -= 1;
+    for(i=0; i < N_ITENS; i++)
+      if(variavelLocal2[i] != NULL)
+        if(!testa_senha(senhaAlvo, variavelLocal2[i])){
+          encontrada = 1;
+          return NULL;
+        }else{
+          free(variavelLocal2[i]);
+        }
+    free(variavelLocal2);
 
     // desbloqueia para que produtor crie mais
-    // chaves
     pthread_cond_signal(&nao_cheio);
     pthread_mutex_unlock(&bloqueio);
-  }while(testa_senha(senhaAlvo, variavelLocal));
-
-  // caso encontre a chave, Ã© definido em uma variÃ¡vle
-  // global encontrada = 1, para que as outras threads
-  // possam ter conhecimento
-  encontrada = 1;
-
-  printf("Senha encontrada: %s\n",variavelLocal);
-
-  return NULL;
+  }while(1);
 }
 
 int main(int argc, char *argv[]) {
@@ -212,6 +152,8 @@ int main(int argc, char *argv[]) {
     printf("Usage: %s <número de digitos> <hash>\n",argv[0]);
     exit(0);
   }
+
+  buffer = (char**) malloc(sizeof(char*)*N_ITENS);
 
   // recebe a senha
   TAM_SENHA = atoi(argv[1]);
@@ -250,9 +192,6 @@ int main(int argc, char *argv[]) {
   finish = clock();
   if(encontrada){
     printf("%f\n",(float)(finish - start)/CLOCKS_PER_SEC);
-    printf("%s\n",senha);
-  }else{
-    printf("Senha não encontrada...\n");
   }
 
   // limpa o buffer e a senha

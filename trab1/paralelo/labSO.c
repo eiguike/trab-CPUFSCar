@@ -172,6 +172,7 @@ void* consumidor(void *v) {
       pthread_cond_signal(&nao_cheio);
       pthread_cond_signal(&encontrado);
       pthread_mutex_unlock(&bloqueio);
+      finalizada++;
       return NULL;
     }
 
@@ -194,9 +195,11 @@ void* consumidor(void *v) {
   // global encontrada = 1, para que as outras threads
   // possam ter conhecimento
   encontrada = 1;
-
-  printf("Senha encontrada: %s\n",variavelLocal);
-
+      pthread_cond_signal(&nao_cheio);
+      pthread_cond_signal(&encontrado);
+      pthread_mutex_unlock(&bloqueio);
+ 
+  finalizada++;
   return NULL;
 }
 
@@ -250,9 +253,6 @@ int main(int argc, char *argv[]) {
   finish = clock();
   if(encontrada){
     printf("%f\n",(float)(finish - start)/CLOCKS_PER_SEC);
-    printf("%s\n",senha);
-  }else{
-    printf("Senha não encontrada...\n");
   }
 
   // limpa o buffer e a senha

@@ -4,7 +4,7 @@
  * Projeto 4: ProgramaÃ§Ã£o Concorrente
  * Nome: Henrique Teruo Eihara          RA: 490016
  * Nome: Marcello da Costa Marques Acar RA: 552550
------------------------------------ */
+ ----------------------------------- */
 #define _GNU_SOURCE
 #include <pthread.h>
 #include <stdio.h>
@@ -13,16 +13,21 @@
 #include <string.h>
 #include <crypt.h>
 
+// Biblioteca que possui a função clock();
+#include <time.h>
+
 #define N_ITENS 100
-#define TAM_SENHA 4
+//#define TAM_SENHA 4
 #define TAM_HASH 256
 #define NUM_PRODUTOR 1
 #define NUM_CONSUMIDOR 4
 
 char * senhaAlvo;
 char * buffer[N_ITENS];
-char senha[TAM_SENHA] = "aaaa";
+char * senha;
 char * auxiliar;
+
+int TAM_SENHA;
 
 int inicio = 0, final = 0, cont = 0, encontrada = 0, finalizada = 0;
 
@@ -34,11 +39,11 @@ int incrementa_senha() {
 
   i = TAM_SENHA - 1;
   while (i >= 0) {
-    if (senha[i] != 'z') {
+    if (senha[i] != '9') {
       senha[i]++;
       i = -2;
     } else {
-      senha[i] = 'a';
+      senha[i] = '0';
       i--;
     }
   }
@@ -66,6 +71,7 @@ int testa_senha(const char *hash_alvo, const char *senha) {
 
 void * produtor(void *v) {
   do{
+
     // bloqueia o buffer para que o produtor
     // possa gerar mais senhas
     pthread_mutex_lock(&bloqueio);
@@ -126,9 +132,6 @@ void * produtor(void *v) {
     pthread_cond_signal(&nao_vazio);
     pthread_mutex_unlock(&bloqueio);
   }while(finalizada < 1 + NUM_CONSUMIDOR);
-
-  if(!encontrada)
-    printf("Senha nÃ£o encontrada...\n");
 
   return NULL;
 }
@@ -200,14 +203,27 @@ void* consumidor(void *v) {
 int main(int argc, char *argv[]) {
   int i;
 
+  // variáveis para controle do tempo de duração da execução do programa
+  clock_t start = 0;
+  clock_t finish = 0;
+
   // verifica o nÃºmero de argumentos
-  if(argc != 2){
-    printf("Usage: %s <hash>\n",argv[0]);
+  if(argc != 3){
+    printf("Usage: %s <número de digitos> <hash>\n",argv[0]);
     exit(0);
   }
 
-  senhaAlvo = (char*)malloc(sizeof(char)*(strlen(argv[1])));
-  strcpy(senhaAlvo,argv[1]);
+  // recebe a senha
+  TAM_SENHA = atoi(argv[1]);
+  senha = (char*) malloc(sizeof(char)*(atoi(argv[1])));
+
+  // definindo senha inicial
+  for(i=0;i < TAM_SENHA;i++)
+    senha[i] = '0';
+  senha[TAM_SENHA] = '\0';
+
+  senhaAlvo = (char*)malloc(sizeof(char)*(strlen(argv[2])));
+  strcpy(senhaAlvo,argv[2]);
 
   // threads de produtor e consumidor respectivamente
   pthread_t thr_produtor[NUM_PRODUTOR], thr_consumidor[NUM_CONSUMIDOR];
@@ -219,6 +235,7 @@ int main(int argc, char *argv[]) {
   pthread_cond_init(&encontrado, NULL);
 
   // cria as threads
+  start = clock();
   for(i = 0; i < NUM_PRODUTOR; i++)
     pthread_create(&thr_produtor[i], NULL, produtor, NULL);
   for(i = 0; i < NUM_CONSUMIDOR; i++)
@@ -229,6 +246,14 @@ int main(int argc, char *argv[]) {
     pthread_join(thr_produtor[i], NULL);
   for(i=0; i < NUM_CONSUMIDOR; i++)
     pthread_join(thr_consumidor[i], NULL);
+
+  finish = clock();
+  if(encontrada){
+    printf("%f\n",(float)(finish - start)/CLOCKS_PER_SEC);
+    printf("%s\n",senha);
+  }else{
+    printf("Senha não encontrada...\n");
+  }
 
   // limpa o buffer e a senha
   free(senhaAlvo);

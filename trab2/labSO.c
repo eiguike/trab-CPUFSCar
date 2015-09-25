@@ -14,6 +14,9 @@
 #include <crypt.h>
 #include <omp.h>
 
+// fila
+#include "estrutura.h"
+
 // Biblioteca que possui a função clock();
 #include <time.h>
 
@@ -84,10 +87,32 @@ void produtor(int rank) {
 	char ** variavelLocal = NULL;
 	int i;
 	int finalizado = 1;
+	char * senhaLocal = (char*) malloc(sizeof(char)*TAM_SENHA);
+	char * aux = (char*) malloc(sizeof(char)*TAM_SENHA);
+
+	// gera senha inicial do produtor
+	printf("EHUHEUH: %d\n", rank%(NUM_THREADS/2));
+	printf("COMECOOOO THREAD %d MEU RANK É %d\n", comecoThread[rank%(NUM_THREADS/2)],rank);	
+	if(comecoThread[omp_get_thread_num()] == 0){
+		for(i=0;i<TAM_SENHA;i++){
+			senhaLocal[i] = '0';
+		}
+	}else{
+		printf("hue\n");
+		sprintf(aux, "%d", comecoThread[rank]);
+		int conta = strlen(aux) - TAM_SENHA;
+		for(i=0;i<conta;i++)
+			senha[i] = '0';
+		strcat(senhaLocal,aux);
+	}
+
+	printf("MINHA PRIMEIRA SENHA É: %s SOU O %d",senhaLocal, rank);
+/*	
 	do{
 		if(encontrada && !finalizada){
 			break;
 		}
+		
 		variavelLocal = (char**) malloc(sizeof(char*)*N_ITENS);
 		for(i=0;i<N_ITENS;i++){
 			variavelLocal[i] = NULL;
@@ -123,12 +148,13 @@ void produtor(int rank) {
 		pthread_cond_signal(&nao_vazio);
 		pthread_mutex_unlock(&bloqueio);
 	}
+*/
 
 	printf("Produtor morreu...\n");
 }
 
-void* consumidor(void *v) {
-	// variavel local para que a thread
+void consumidor() {
+/*	// variavel local para que a thread
 	// possa trabalhar com ela independentemnete
 	// do buffer
 	char ** variavelLocal2 = NULL;
@@ -171,7 +197,7 @@ void* consumidor(void *v) {
 		pthread_cond_signal(&nao_cheio);
 		pthread_mutex_unlock(&bloqueio);
 	}
-
+*/
 	printf("Consumidor morreu...\n");
 }
 
@@ -202,20 +228,19 @@ int main(int argc, char *argv[]) {
 	start = clock();
 
 	// divido o trabalho dos produtores
-	int divisao = atoi(senha);
-	divisao = divisao/NUM_THREADS;	
+	int divisao = atoi("9999");
+	divisao = divisao/(NUM_THREADS/2);	
 	
 	comecoThread = malloc(sizeof(int)*(NUM_THREADS/2));
 	comecoThread[0] = 0;
 	for( i = 1; i < NUM_THREADS/2; i++){
 		comecoThread[i] = comecoThread[i-1] + divisao + 1;
+		printf("%d comecothread\n", comecoThread[i]);
 	}
 
-	int contador = 0;	
 	# pragma omp parallel num_threads(NUM_THREADS)
 	if((omp_get_thread_num() % 2) == 0){
-		produtor(contador);
-		contador++;
+		produtor(omp_get_thread_num());
 	}else{
 		consumidor();
 	}

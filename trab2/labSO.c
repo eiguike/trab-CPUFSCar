@@ -23,12 +23,13 @@
 #define N_ITENS 2000
 //#define TAM_SENHA 4
 #define TAM_HASH 256
-#define NUM_THREADS 4
+#define NUM_PRODUTOR 3
+#define NUM_CONSUMIDOR 3
+
+int divisao;
+static int NUM_THREADS = NUM_PRODUTOR + NUM_CONSUMIDOR;
 
 char * senhaAlvo;
-char ** buffer;
-char ** buffer2;
-char * senha;
 char * auxiliar;
 
 // variáveis para controle do tempo de duração da execução do programa
@@ -42,217 +43,227 @@ int produtorNumeros = 0;
 int consumidorNumeros = 0;
 int * comecoThread;
 
-int incrementa_senha_conformeItens(){
-	int proxSenha = strtol(senha, NULL,10);
-	printf("Proxima senha: %d", proxSenha);
-}
+int incrementa_senha(char * senha) {
+  int i;
 
-int incrementa_senha() {
-	int i;
+  i = TAM_SENHA - 1;
+  while (i >= 0) {
+    if (senha[i] != '9') {
+      senha[i]++;
+      i = -2;
+    } else {
+      senha[i] = '0';
+      i--;
+    }
+  }
 
-	i = TAM_SENHA - 1;
-	while (i >= 0) {
-		if (senha[i] != '9') {
-			senha[i]++;
-			i = -2;
-		} else {
-			senha[i] = '0';
-			i--;
-		}
-	}
-	if (i == -1) {
-		return 0; // quando nÃ£o hÃ¡ mais como incrementar
-	}else{
-		return 1;
-	}
+  //printf("senha gerada %s ID: %d\n",senha, omp_get_thread_num());
+  if (i == -1) {
+    return 0; // quando nÃ£o hÃ¡ mais como incrementar
+  }else{
+    return 1;
+  }
 }
 void calcula_hash_senha(const char *senha, char *hash) {
-	struct crypt_data data;
-	data.initialized = 0;
-	strcpy(hash, crypt_r(senha, "aa", &data));
+  struct crypt_data data;
+  data.initialized = 0;
+  strcpy(hash, crypt_r(senha, "aa", &data));
 }
 
 int testa_senha(const char *hash_alvo, const char *senha) {
-	char hash_calculado[TAM_HASH + 1];
+  char hash_calculado[TAM_HASH + 1];
 
-	calcula_hash_senha(senha, hash_calculado);
-	if (!strcmp(hash_alvo, hash_calculado)) {
-		return 0;
-	}
-	//printf("%s %s %s\n",hash_alvo, hash_calculado, senha);
-	return 1;
+  //printf("testei a senha %s ID: %d\n", senha, omp_get_thread_num());
+
+  calcula_hash_senha(senha, hash_calculado);
+  if (!strcmp(hash_alvo, hash_calculado)) {
+    printf("ACHEI A SENHA!!!!\n");
+    return 0;
+  }
+  //printf("%s %s %s\n",hash_alvo, hash_calculado, senha);
+  return 1;
 }
 
 void produtor(int rank) {
-	char ** variavelLocal = NULL;
-	int i;
-	int finalizado = 1;
-	char * senhaLocal = (char*) malloc(sizeof(char)*TAM_SENHA);
-	char * aux = (char*) malloc(sizeof(char)*TAM_SENHA);
+  // vetor de senha que será iterada
+  // neste escopo
+  char ** variavelLocal = NULL;
+  int i;
 
-	// gera senha inicial do produtor
-	printf("EHUHEUH: %d\n", rank%(NUM_THREADS/2));
-	printf("COMECOOOO THREAD %d MEU RANK É %d\n", comecoThread[rank%(NUM_THREADS/2)],rank);	
-	if(comecoThread[omp_get_thread_num()] == 0){
-		for(i=0;i<TAM_SENHA;i++){
-			senhaLocal[i] = '0';
-		}
-	}else{
-		printf("hue\n");
-		sprintf(aux, "%d", comecoThread[rank]);
-		int conta = strlen(aux) - TAM_SENHA;
-		for(i=0;i<conta;i++)
-			senha[i] = '0';
-		strcat(senhaLocal,aux);
-	}
+  // variável que determina se não há mais
+  // senha para gerar nesta thread
+  int finalizado = 1;
 
-	printf("MINHA PRIMEIRA SENHA É: %s SOU O %d",senhaLocal, rank);
-/*	
-	do{
-		if(encontrada && !finalizada){
-			break;
-		}
-		
-		variavelLocal = (char**) malloc(sizeof(char*)*N_ITENS);
-		for(i=0;i<N_ITENS;i++){
-			variavelLocal[i] = NULL;
-		}
-		i = 0;
-		do{
-			if(!finalizado){
-				break;
-			}
-			// local aonde se gera as chaves
-			auxiliar = (char*)malloc(sizeof(char)*TAM_SENHA);
-			strcpy(auxiliar, senha);
-			variavelLocal[i] = auxiliar;
-			i++;
-		}while((i < N_ITENS)&&(finalizado = incrementa_senha()));
+  // número de senhas que ja foram geradas
+  int acumuladorSenhasGeradas = 0;
 
-		if(encontrada && !finalizado)
-			break;
+  // senha individual, que será adicionada na variavelLocal
+  char * senhaLocal = (char*) malloc(sizeof(char)*TAM_SENHA);
+  char * aux = (char*) malloc(sizeof(char)*TAM_SENHA);
 
-		// ACESSO ATÔMICO PARA GERAÇÃO DE SENHAS
-		pthread_mutex_lock(&bloqueio);
-		buffer = variavelLocal;
-		pthread_cond_signal(&nao_vazio);
-		pthread_cond_wait(&nao_cheio, &bloqueio);
+  // gera a primeira senha do produtor
+  if(comecoThread[omp_get_thread_num()] == 0){
+    for(i=0;i<TAM_SENHA;i++){
+      senhaLocal[i] = '0';
+    }
+  }else{
+    // caso o produtor não seja a thread 0, gerara
+    // a senha apartir da conta feita no main
+    sprintf(aux, "%d", comecoThread[rank]);
+    int conta = strlen(aux) - TAM_SENHA;
+    for(i=0;i<conta;i++)
+      senhaLocal[i] = '0';
+    strcat(senhaLocal,aux);
+  }
 
-		if(encontrada && !finalizado)
-			break;
-		pthread_mutex_unlock(&bloqueio);
-	}while(1);
+  // aqui começa a mágica
+  do{
+    variavelLocal = (char**) malloc(sizeof(char*)*N_ITENS);
+    for(i=0;i<N_ITENS;i++){
+      variavelLocal[i] = NULL;
+    }
+    i = 0;
+    // loop que acontece a criação de senhas
+    do{
+      // em caso de algumas threads consumidoras encontrem
+      // alguma senha
+      if(!finalizado || encontrada){
+        break;
+      }
+      // local aonde se gera as chaves
+      auxiliar = (char*)malloc(sizeof(char)*TAM_SENHA);
+      strcpy(auxiliar, senhaLocal);
+      variavelLocal[i] = auxiliar;
+      i++;
+      acumuladorSenhasGeradas++;
 
-	produtorNumeros++;
-	while(consumidorNumeros < NUM_CONSUMIDOR){
-		pthread_cond_signal(&nao_vazio);
-		pthread_mutex_unlock(&bloqueio);
-	}
-*/
+      // esse loop só parara quando,
+      // não houver mais senhas para gerar
+      // quando o número de senhas geradas já ultrapassou o N_ITENS
+    }while((i <= N_ITENS)&&(finalizado = incrementa_senha(senhaLocal)));
 
-	printf("Produtor morreu...\n");
+    // sleep mto provavelmente  desnecessário
+    sleep(3);
+
+    // parte qe também acho desnecessário, entretanto
+    // utilizo para não utilizar toda memora do computador
+    int valor;
+    while(1){
+#pragma omp critical(fila)
+      valor = adicionaFila(variavelLocal);
+      if(!valor){
+      }else{
+        break;
+      }
+    }
+
+
+    // quando é encontrado a senha, ou então, é finalizado a gearção de senhas
+    // ou então, o acmulador de senhas geradas já ultrapassou o limite
+    // é finalizado a tread
+    if(!finalizado || encontrada || acumuladorSenhasGeradas >= divisao){
+      break;
+    }
+
+  }while(1);
+
+  // só soma com o número de threads que sairam
+  produtorNumeros++;
+  printf("Produtor morreu...\n");
 }
 
 void consumidor() {
-/*	// variavel local para que a thread
-	// possa trabalhar com ela independentemnete
-	// do buffer
-	char ** variavelLocal2 = NULL;
-	int i;
+  // variavel local para que a thread
+  // possa trabalhar com ela independentemnete
+  // do buffer
+  char ** variavelLocal2 = NULL;
+  int i;
 
-	do{
-		if(encontrada){
-			finalizada++;
-			break;
-		}
+  do{
+    // como openmp não tem um tratador condicional que deixa a thread
+    // em standby, foi necessário esse if
+    if(head != NULL){
+#pragma omp critical(fila)
+      variavelLocal2 = removerFila();
 
-		// LEMBRETE, VERIFICAR SE O BUFFER É NULL
-		pthread_mutex_lock(&bloqueio);
-		variavelLocal2 = buffer;
-		buffer = NULL;
+      for(i=0; (i < N_ITENS) && (variavelLocal2 != NULL); i++){
+        if(variavelLocal2[i] != NULL)
+          if(!testa_senha(senhaAlvo, variavelLocal2[i])){
+            encontrada = 1;
+            finalizada++;
+            free(variavelLocal2[i]);
+          }else{
+            free(variavelLocal2[i]);
+          }
+      }
+      free(variavelLocal2);
 
-		pthread_cond_signal(&nao_cheio);
-		pthread_cond_wait(&nao_vazio, &bloqueio);
-		pthread_mutex_unlock(&bloqueio);
+      if(encontrada)
+        break;
+    }
+    
+    // if utilizado para verificar se todos os produtores
+    // ja sairam, se sim, o consumidro sai tbm.
+    if(produtorNumeros == NUM_PRODUTOR)
+      break;
+  }while(1);
 
-		for(i=0; (i < N_ITENS) && (variavelLocal2 != NULL); i++){
-			if(variavelLocal2[i] != NULL)
-				if(!testa_senha(senhaAlvo, variavelLocal2[i])){
-					encontrada = 1;
-					finalizada++;
-					pthread_cond_signal(&nao_cheio);
-				}else{
-					free(variavelLocal2[i]);
-				}
-		}
-
-		if(encontrada)
-			break;
-		free(variavelLocal2);
-	}while(1);
-
-	consumidorNumeros++;
-
-	while(produtorNumeros <  NUM_PRODUTOR){
-		pthread_cond_signal(&nao_cheio);
-		pthread_mutex_unlock(&bloqueio);
-	}
-*/
-	printf("Consumidor morreu...\n");
+  printf("Consumidor morreu...\n");
 }
 
 int main(int argc, char *argv[]) {
-	int i;
+  int i;
+  char * senha;
 
-	// verifica o nÃºmero de argumentos
-	if(argc != 3){
-		printf("Usage: %s <número de digitos> <hash>\n",argv[0]);
-		exit(0);
-	}
+  // prepara a fila
+  criarFila();
 
-	buffer = (char**) malloc(sizeof(char*)*N_ITENS);
+  // verifica o nÃºmero de argumentos
+  if(argc != 3){
+    printf("Usage: %s <número de digitos> <hash>\n",argv[0]);
+    exit(0);
+  }
 
-	// recebe a senha
-	TAM_SENHA = atoi(argv[1]);
-	senha = (char*) malloc(sizeof(char)*(atoi(argv[1])));
+  // recebe a senha
+  TAM_SENHA = atoi(argv[1]);
+  senha = (char*) malloc(sizeof(char)*(atoi(argv[1])));
 
-	// definindo senha inicial
-	for(i=0;i < TAM_SENHA;i++)
-		senha[i] = '0';
-	senha[TAM_SENHA] = '\0';
+  // definindo senha inicial
+  for(i=0;i < TAM_SENHA;i++)
+    senha[i] = '0';
+  senha[TAM_SENHA] = '\0';
 
-	senhaAlvo = (char*)malloc(sizeof(char)*(strlen(argv[2])));
-	strcpy(senhaAlvo,argv[2]);
+  senhaAlvo = (char*)malloc(sizeof(char)*(strlen(argv[2])));
+  strcpy(senhaAlvo,argv[2]);
 
-	// inicia a contagem
-	start = clock();
+  // inicia a contagem
+  start = clock();
 
-	// divido o trabalho dos produtores
-	int divisao = atoi("9999");
-	divisao = divisao/(NUM_THREADS/2);	
-	
-	comecoThread = malloc(sizeof(int)*(NUM_THREADS/2));
-	comecoThread[0] = 0;
-	for( i = 1; i < NUM_THREADS/2; i++){
-		comecoThread[i] = comecoThread[i-1] + divisao + 1;
-		printf("%d comecothread\n", comecoThread[i]);
-	}
+  // divido o trabalho dos produtores
+  divisao = atoi("9999");
+  divisao = divisao/NUM_PRODUTOR;	
 
-	# pragma omp parallel num_threads(NUM_THREADS)
-	if((omp_get_thread_num() % 2) == 0){
-		produtor(omp_get_thread_num());
-	}else{
-		consumidor();
-	}
+  comecoThread = malloc(sizeof(int)*(NUM_THREADS/2));
+  comecoThread[0] = 0;
+  for( i = 1; i < NUM_THREADS/2; i++){
+    comecoThread[i] = comecoThread[i-1] + divisao + 1;
+  }
 
-	finish = clock();
-	if(encontrada){
-		printf("%f\n",(float)(finish - start)/CLOCKS_PER_SEC);
-	}
+# pragma omp parallel num_threads(NUM_THREADS)
+  if(omp_get_thread_num() < NUM_PRODUTOR){
+    produtor(omp_get_thread_num());
+  }else{
+    consumidor();
+  }
 
-	// limpa o buffer e a senha
-	free(senhaAlvo);
-	free(*buffer);
+  finish = clock();
+  if(encontrada){
+    printf("%f\n",(float)(finish - start)/CLOCKS_PER_SEC);
+  }
 
-	return 0;
+  // limpa o buffer e a senha
+  free(senhaAlvo);
+
+  return 0;
 }
+

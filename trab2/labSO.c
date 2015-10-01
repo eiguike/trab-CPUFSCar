@@ -140,7 +140,7 @@ int main(int argc, char *argv[]) {
 
   finish = clock();
   if(encontrada){
-    printf("%f\n",(float)(finish - start)/CLOCKS_PER_SEC);
+    printf("Tempo gasto: %f\n",(float)(finish - start)/CLOCKS_PER_SEC);
   }
 
   free(ultimaSenha);

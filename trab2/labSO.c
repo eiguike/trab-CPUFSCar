@@ -57,6 +57,10 @@ int incrementa_senha(char * senha) {
     }
   }
 
+if(strcmp(senha,"8147")==0)
+//	printf("HEUHEUHE ID: %d\n",omp_get_thread_num());
+//printf("gerei a senha %s ID: %d\n",senha, omp_get_thread_num());
+
   //printf("senha gerada %s ID: %d\n",senha, omp_get_thread_num());
   if (i == -1) {
     return 0; // quando nÃ£o hÃ¡ mais como incrementar
@@ -76,8 +80,9 @@ int testa_senha(const char *hash_alvo, const char *senha) {
   //printf("testei a senha %s ID: %d\n", senha, omp_get_thread_num());
 
   calcula_hash_senha(senha, hash_calculado);
+//	printf("consumi a senha %s\n",senha);
   if (!strcmp(hash_alvo, hash_calculado)) {
-    printf("ACHEI A SENHA!!!!\n");
+    printf("ACHEI A SENHA!!!! %s\n", senha);
     return 0;
   }
   //printf("%s %s %s\n",hash_alvo, hash_calculado, senha);
@@ -115,6 +120,8 @@ void produtor(int rank) {
       senhaLocal[i] = '0';
     strcat(senhaLocal,aux);
   }
+	
+	printf("divisao: %d minha primeir asenha é: %s tenho id: %d\n",divisao,senhaLocal, omp_get_thread_num());
 
   // aqui começa a mágica
   do{
@@ -140,7 +147,10 @@ void produtor(int rank) {
       // esse loop só parara quando,
       // não houver mais senhas para gerar
       // quando o número de senhas geradas já ultrapassou o N_ITENS
-    }while((i <= N_ITENS)&&(finalizado = incrementa_senha(senhaLocal)));
+    }while((i <= N_ITENS)&&(finalizado = incrementa_senha(senhaLocal)) && acumuladorSenhasGeradas < divisao);
+	
+	if(acumuladorSenhasGeradas >= divisao)
+		printf("divisao %d minha ultima senha: %s ID: %d\n",divisao,auxiliar,omp_get_thread_num());
 
     // sleep mto provavelmente  desnecessário
     sleep(3);
@@ -150,9 +160,9 @@ void produtor(int rank) {
     int valor;
     while(1){
 #pragma omp critical(fila)
-      valor = adicionaFila(variavelLocal);
-      if(!valor){
-      }else{
+      valor = adicionaFila(variavelLocal);	
+	
+      if(valor || encontrada){
         break;
       }
     }
@@ -240,13 +250,13 @@ int main(int argc, char *argv[]) {
   start = clock();
 
   // divido o trabalho dos produtores
-  divisao = atoi("9999");
+  divisao = atoi("999999");
   divisao = divisao/NUM_PRODUTOR;	
 
-  comecoThread = malloc(sizeof(int)*(NUM_THREADS/2));
+  comecoThread = malloc(sizeof(int)*(NUM_PRODUTOR));
   comecoThread[0] = 0;
-  for( i = 1; i < NUM_THREADS/2; i++){
-    comecoThread[i] = comecoThread[i-1] + divisao + 1;
+  for( i = 1; i < NUM_PRODUTOR; i++){
+    comecoThread[i] = comecoThread[i-1] + divisao;
   }
 
 # pragma omp parallel num_threads(NUM_THREADS)

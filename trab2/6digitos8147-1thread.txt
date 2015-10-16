@@ -1,0 +1,14 @@
+0: Senha encontrada: 143295
+Tempo gasto: 25.033728
+0: Senha encontrada: 143295
+Tempo gasto: 25.052008
+0: Senha encontrada: 143295
+Tempo gasto: 25.031544
+0: Senha encontrada: 143295
+Tempo gasto: 25.045858
+0: Senha encontrada: 143295
+Tempo gasto: 24.997896
+0: Senha encontrada: 143295
+Tempo gasto: 25.302139
+0: Senha encontrada: 143295
+Tempo gasto: 25.505257

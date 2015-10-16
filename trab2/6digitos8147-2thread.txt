@@ -1,0 +1,2 @@
+0: Senha encontrada: 143295
+Tempo gasto: 50.640808

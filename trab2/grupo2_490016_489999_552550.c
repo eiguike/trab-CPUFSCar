@@ -11,6 +11,7 @@
 #include <string.h>
 #include <crypt.h>
 #include <omp.h>
+#include "timer.h"
 
 // Biblioteca que possui a função clock();
 #include <time.h>
@@ -23,8 +24,8 @@
 int NUM_THREADS = 1;
 
 // variáveis para controle do tempo de duração da execução do programa
-clock_t start = 0;
-clock_t finish = 0;
+double start = 0;
+double finish = 0;
 
 int TAM_SENHA;
 
@@ -62,6 +63,7 @@ int testa_senha(const char *hash_alvo, const char *senha) {
 void decifra(char * hash) {
   // guarda em uma variável local o ID da thread
   int meuId = omp_get_thread_num();
+  printf("%d : minha primeira senha %d\n",meuId,vetorInicio[meuId]);
 
   // variávle que ficará armazeando a senha gerada 
   char * senha = malloc(sizeof(char)*TAM_SENHA);
@@ -123,7 +125,6 @@ void decifra(char * hash) {
 
   free(senha);
   free(senhaAux);
-  printf("Thread morreu...\n");
 }
 
 int main(int argc, char *argv[]) {
@@ -169,12 +170,13 @@ int main(int argc, char *argv[]) {
   vetorFinal[NUM_THREADS - 1] += atoi(ultimaSenha) - vetorFinal[NUM_THREADS -1];
 
   // cria as threads
+  GET_TIME(start);
 # pragma omp parallel num_threads(NUM_THREADS)
   decifra(argv[2]);
 
-  finish = clock();
+  GET_TIME(finish);
   if(encontrada){
-    printf("Tempo gasto: %f\n",(float)(finish - start)/CLOCKS_PER_SEC);
+    printf("Tempo gasto: %f\n",(finish - start));
   }
 
   free(ultimaSenha);

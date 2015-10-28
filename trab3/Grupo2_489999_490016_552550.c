@@ -63,7 +63,10 @@ int testa_senha(const char *hash_alvo, const char *senha) {
 // funcao que enviara a mensagem para o proximo processo
 // é utilizada quando um processo encontrou a senha ou entoa
 // quando não houver mais senhas para serem geradas
-int verifica(){
+void verifica(){
+  if(NUM_PROC == 1)
+	return;
+
   if(my_rank != NUM_PROC-1){
     MPI_Send(&encontrada,sizeof(int), MPI_INT, my_rank + 1, 1, MPI_COMM_WORLD);
   }
@@ -81,7 +84,8 @@ void decifra(char * hash, int * vetorHibrido) {
 #pragma omp parallel num_threads(2)
   if(omp_get_thread_num() == 0){
     //printf("%d : esperando mensagem de encerramento\n", my_rank);
-    MPI_Recv(&encontrada, sizeof(int), MPI_INT, MPI_ANY_SOURCE,1, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+    if(NUM_PROC > 1)
+      MPI_Recv(&encontrada, sizeof(int), MPI_INT, MPI_ANY_SOURCE,1, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
     //printf("%d : minha thread morreu\n",my_rank);
   }else{
     // variávle que ficará armazeando a senha gerada
@@ -180,6 +184,7 @@ int main(int argc, char * argv[]) {
   // se for o processo 0, ele realizara a divisao de trabalho
   // em relacao aos outros processos existentes.
   if(my_rank == 0){
+	printf("teste\n");
     // vetor que conterá as primeiras/últimas senhas que
     // devem ser geradas
     vetorInicio = malloc(sizeof(int)*NUM_PROC);
@@ -203,7 +208,8 @@ int main(int argc, char * argv[]) {
     vetorHibrido[1] = vetorFinal[0];
 
     // manda a primeira mensagem
-    MPI_Send(vetorHibrido, sizeof(int)*2, MPI_INT, 1, 0, MPI_COMM_WORLD);
+    if(NUM_PROC > 1)
+      MPI_Send(vetorHibrido, sizeof(int)*2, MPI_INT, 1, 0, MPI_COMM_WORLD);
     for(i = 1; i < NUM_PROC; i++){
       vetorInicio[i] = vetorInicio[i-1] + divisao;
       vetorFinal[i] = vetorInicio[i] + (divisao -1);

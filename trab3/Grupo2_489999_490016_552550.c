@@ -17,14 +17,15 @@
 #include "timer.h"
 
 #define N_ITENS 2000
-//#define TAM_SENHA 4
 #define TAM_HASH 256
 
+// Variável que definira quando foi encontrada a senha
 int encontrada = 0; 
-int encontrada2 = 0;
+// variável que definira qual processo encontrou a senha
+int encontrada2 = -1;
 
 // é definido um número padrão de threads
-int NUM_THREADS = 1;
+int NUM_PROC = 1;
 
 // variáveis para controle do tempo de duração da execução do programa
 clock_t start = 0;
@@ -59,8 +60,11 @@ int testa_senha(const char *hash_alvo, const char *senha) {
   return 1;
 }
 
+// funcao que enviara a mensagem para o proximo processo
+// é utilizada quando um processo encontrou a senha ou entoa
+// quando não houver mais senhas para serem geradas
 int verifica(){
-  if(my_rank != NUM_THREADS-1){
+  if(my_rank != NUM_PROC-1){
     MPI_Send(&encontrada,sizeof(int), MPI_INT, my_rank + 1, 1, MPI_COMM_WORLD);
   }
   else
@@ -72,6 +76,8 @@ int verifica(){
 // é a correta
 void decifra(char * hash, int * vetorHibrido) {
 
+// cria uma thread, em que ficará bloqueada esperando a mensagem
+// de termino ou quando a senha foi encontrada
 #pragma omp parallel num_threads(2)
   if(omp_get_thread_num() == 0){
     //printf("%d : esperando mensagem de encerramento\n", my_rank);
@@ -95,7 +101,7 @@ void decifra(char * hash, int * vetorHibrido) {
       senha[i] = '0';
     }
 
-    // joga a senha gerada no vetorInicio (inicialmente em int)
+    // joga a senha gerada no vetorHibrido[0] (inicialmente em int)
     // para um char
     sprintf(senhaAux,"%d", vetorHibrido[0]);
     // logo após, é copiado senhaAux para variávle senha
@@ -107,7 +113,7 @@ void decifra(char * hash, int * vetorHibrido) {
     // a partir da string gerada anteriormente
     // apenas parara, quando for encontrada ou então
     // quando o número de senhas dimensionadas para gerar
-    // a partir desta thread se esgotar
+    // a partir deste processo se esgotar
     while(!encontrada && vetorHibrido[0] <= vetorHibrido[1]){
 
       // loop que iterá pela string, realizando o overflow
@@ -126,7 +132,7 @@ void decifra(char * hash, int * vetorHibrido) {
 
       // realiza o teste da senha, se for a que foi
       // passada como parâmetro, define encontrada como 1
-      // sai do loop prinicpal e fecha a thread
+      // sai do loop prinicpal 
       if(!testa_senha(hash, senha)){
         encontrada = 1;
         break;
@@ -135,10 +141,12 @@ void decifra(char * hash, int * vetorHibrido) {
       vetorHibrido[0]++;
       overflow = 1;
     }
+    // manda a mensagem circular, no caso, mandaria pro proximo processo
+    // e o proximo processo mandaria para o proximo, até q o último processo
+    // mandaria para o primeiro processo
     verifica();
     free(senha);
     free(senhaAux);
-    //printf("Thread morreu...\n");
   }
 }
 
@@ -152,7 +160,7 @@ int main(int argc, char * argv[]) {
   MPI_Init(&argc, &argv);
 
   if(argc != 3){
-    printf("Usage: %s <número de digitos> <hash> <número de threads>\n",argv[0]);
+    printf("Usage: %s <número de digitos> <hash>\n",argv[0]);
     exit(0);
   }
 
@@ -162,17 +170,20 @@ int main(int argc, char * argv[]) {
   // define rank para cada processo
   MPI_Comm_rank(MPI_COMM_WORLD, &my_rank);
 
-  NUM_THREADS = comm_sz;
-  // recebe número de threads passada como parâmetro
+  // recebe o numero de processos passado como parametro
+  NUM_PROC = comm_sz;
+  
   TAM_SENHA = atoi(argv[1]);
 
   int vetorHibrido[2];
+
+  // se for o processo 0, ele realizara a divisao de trabalho
+  // em relacao aos outros processos existentes.
   if(my_rank == 0){
-    //printf("ENTREI\n");
     // vetor que conterá as primeiras/últimas senhas que
     // devem ser geradas
-    vetorInicio = malloc(sizeof(int)*NUM_THREADS);
-    vetorFinal = malloc(sizeof(int)*NUM_THREADS);
+    vetorInicio = malloc(sizeof(int)*NUM_PROC);
+    vetorFinal = malloc(sizeof(int)*NUM_PROC);
 
     // última senha de fato ex: 9999 para uma senha de 4 digitos
     char * ultimaSenha = malloc(sizeof(char)*TAM_SENHA);
@@ -180,24 +191,27 @@ int main(int argc, char * argv[]) {
       ultimaSenha[i] = '9';
     ultimaSenha[i] = '\0';
 
-    // realizando o dimensionamento das threads
-    int divisao = (atoi(ultimaSenha)+1)/NUM_THREADS;
+    // realizando o dimensionamento dos processos 
+    int divisao = (atoi(ultimaSenha)+1)/NUM_PROC;
 
-    // escolhendo a divisão de trabalho a partir da
-    // ID que será criada para cada thread
+    // realizando a divisao de trabalho, e definindo a mensagem no vetor
+    // vetorHibrido, sendo o primeiro indice o inicio e o segundo indice 
+    // o numero de senhas que deve ser gerada
     vetorInicio[0] = 0;
     vetorFinal[0] = divisao -1;
     vetorHibrido[0] = vetorInicio[0];
     vetorHibrido[1] = vetorFinal[0];
+
+    // manda a primeira mensagem
     MPI_Send(vetorHibrido, sizeof(int)*2, MPI_INT, 1, 0, MPI_COMM_WORLD);
-    for(i = 1; i < NUM_THREADS; i++){
+    for(i = 1; i < NUM_PROC; i++){
       vetorInicio[i] = vetorInicio[i-1] + divisao;
       vetorFinal[i] = vetorInicio[i] + (divisao -1);
       vetorHibrido[0] = vetorInicio[i];
       vetorHibrido[1] = vetorFinal[i];
 
       // mandando mensagem
-      if(i < NUM_THREADS-1){
+      if(i < NUM_PROC-1){
         //printf("%d : enviei mensagem\n", my_rank);
         MPI_Send(vetorHibrido, sizeof(int)*2, MPI_INT, i+1, 0, MPI_COMM_WORLD);
       }
@@ -205,31 +219,33 @@ int main(int argc, char * argv[]) {
     // tratamento de caso especial, no caso, como a divisão
     // não é exata, a última thread gerará as senhas para que o número
     // fique exato
-    vetorFinal[NUM_THREADS - 1] += atoi(ultimaSenha) - vetorFinal[NUM_THREADS -1];
-    vetorHibrido[1] = vetorFinal[NUM_THREADS -1];
+    vetorFinal[NUM_PROC - 1] += atoi(ultimaSenha) - vetorFinal[NUM_PROC -1];
+    vetorHibrido[1] = vetorFinal[NUM_PROC -1];
 
     free(ultimaSenha);
   }
-  //printf("%d : esperando mensagem\n", my_rank);
+
+  // se o processo for diferente de zero, ele esperara a mensagem
   if(my_rank != 0)
     MPI_Recv(vetorHibrido, sizeof(int)*2, MPI_INT, MPI_ANY_SOURCE, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
 
-  //printf("%d : 0 %d\n",my_rank, vetorHibrido[0]);
-  //printf("%d : 1 %d\n",my_rank, vetorHibrido[1]);
-
+  // iniciado a contagem de tempo
   GET_TIME(start);
-  // cria as threads
   decifra(argv[2], vetorHibrido);
   GET_TIME(finish);
+  // finalizado a contagem de tempo
+
+  // o processo que encontrou a senha printará o tempo gasto
   if(encontrada2 == my_rank){
     printf("%d : Tempo gasto: %f\n", my_rank,(finish - start));
   }
 
+  // limpa os vetores utilizados na divisao do trabalho
   free(vetorInicio);
   free(vetorFinal);
 
+  // join em todos os processos
   MPI_Finalize();
 
-  // limpa o buffer e a senha
   return 0;
 }

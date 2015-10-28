@@ -4,6 +4,7 @@
 //  Henrique Teruo Eihara           RA: 490016
 //  Marcello da Costa Marques Acar  RA: 552550
 //----------------------------------------------
+
 #define _GNU_SOURCE
 #include <stdio.h>
 #include <stdlib.h>
@@ -37,7 +38,7 @@ int TAM_SENHA;
 // e a última senha que deve ser gerada
 int * vetorInicio;
 int * vetorFinal;
-  int my_rank;
+int my_rank;
 
 // função que calcula a hash
 void calcula_hash_senha(const char *senha, char *hash) {
@@ -184,7 +185,6 @@ int main(int argc, char * argv[]) {
   // se for o processo 0, ele realizara a divisao de trabalho
   // em relacao aos outros processos existentes.
   if(my_rank == 0){
-	printf("teste\n");
     // vetor que conterá as primeiras/últimas senhas que
     // devem ser geradas
     vetorInicio = malloc(sizeof(int)*NUM_PROC);

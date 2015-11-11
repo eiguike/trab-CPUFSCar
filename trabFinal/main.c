@@ -1,6 +1,6 @@
 //
 // para compilar:
-// gcc main.c -o main -lGL -lGLU -lglut
+// gcc main.c -o main -lGL -lGLU -lglut -lm
 //
 
 #ifdef __APPLE__
@@ -9,9 +9,12 @@
 #include <GL/glut.h>
 #endif
 
+#include <stdlib.h>
+#include <stdio.h>
 #include <math.h>
+#include <time.h>
 
-int time = 0;
+int nParticulas;
 
 typedef struct particula{
   double x;
@@ -22,15 +25,35 @@ typedef struct particula{
 
 Particula * vetor;
 
-void iniciarParticula(int nParticulas){
+double funcaoBonita(double min, double max){
+  double aux = (double)rand()/(double)RAND_MAX * (max - min) + min;
+  return aux;
+}
+
+void iniciarParticula(){
   vetor = malloc(sizeof(Particula)*nParticulas);
   int i;
 
   for(i=0;i<nParticulas;i++){
-    vetor[i].y = 10;
-    vetor[i].x = (rand() % 6) * (rand() % 6 == 0 ? 1 :-1);
-    vetor[i].z = (rand() % 6) * (rand() % 6 == 0 ? 1 :-1);
+    vetor[i].y = 10 + funcaoBonita(0,6);
+    vetor[i].x = funcaoBonita(-6,6) * (rand() % 2 == 0 ? 1 :-1);
+    vetor[i].z = funcaoBonita(-6,6) * (rand() % 2 == 0 ? 1 :-1);
   }
+}
+
+void renderizarParticulas(){
+  int i;
+
+  for(i=0;i<nParticulas;i++){
+    glPushMatrix();
+      glTranslated(vetor[i].x,vetor[i].y,vetor[i].z);
+      // tenho que fazer a rotação na câmera e não na esfera
+      //glRotated(angle,0,0,1);
+      glutWireCube(0.01);
+    glPopMatrix();
+    vetor[i].y = vetor[i].y - (vetor[i].y < -6 ? 0 : funcaoBonita(-0.2,0.8));
+  }
+
 }
 
 void changeSize(int w, int h) {
@@ -71,13 +94,15 @@ void renderScene(void) {
   // Reset transformations
   glLoadIdentity();
   // Set the camera
-  gluLookAt(6,20.0f, 20,
+  gluLookAt(6,20.0f, 30,
       0.0, 0.0,  0.0,
       0.0f, 1.0f,  0.0f);
   glColor3d(1,1,1);
 
+  renderizarParticulas();
+
   glPushMatrix();
-    glTranslated(1,1,1);
+    //glTranslated(1,1,1);
     glRotated(90,45,0,0);
     // tenho que fazer a rotação na câmera e não na esfera
     //glRotated(angle,0,0,1);
@@ -90,8 +115,9 @@ void renderScene(void) {
 }
 
 int main(int argc, char **argv) {
-
-  iniciarParticula(atoi(argv[1]));
+  nParticulas = atoi(argv[1]);
+  srand(time(NULL));
+  iniciarParticula();
   // init GLUT and create window
   glutInit(&argc, argv);
   glutInitDisplayMode(GLUT_DEPTH | GLUT_DOUBLE | GLUT_RGBA);

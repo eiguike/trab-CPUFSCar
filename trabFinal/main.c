@@ -49,9 +49,9 @@ void renderizarParticulas(){
       glTranslated(vetor[i].x,vetor[i].y,vetor[i].z);
       // tenho que fazer a rotação na câmera e não na esfera
       //glRotated(angle,0,0,1);
-      glutWireCube(0.01);
+      glutWireCube(0.1);
     glPopMatrix();
-    vetor[i].y = vetor[i].y - (vetor[i].y < -6 ? 0 : funcaoBonita(-0.2,0.8));
+    vetor[i].y = vetor[i].y - (vetor[i].y < -6 ? 0 : funcaoBonita(-0.2,0.4));
   }
 
 }
@@ -101,12 +101,13 @@ void renderScene(void) {
 
   renderizarParticulas();
 
+  glColor3d(0,1,1);
   glPushMatrix();
     //glTranslated(1,1,1);
     glRotated(90,45,0,0);
     // tenho que fazer a rotação na câmera e não na esfera
     //glRotated(angle,0,0,1);
-    glutWireSphere(6,10,10);
+    glutSolidSphere(6,10,10);
   glPopMatrix();
 
   angle+=0.1f;
@@ -124,6 +125,7 @@ int main(int argc, char **argv) {
   glutInitWindowPosition(100,100);
   glutInitWindowSize(320,320);
   glutCreateWindow("Lighthouse3D- GLUT Tutorial");
+  glEnable(GL_DEPTH_TEST);
 
   // register callbacks
   glutDisplayFunc(renderScene);

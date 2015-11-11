@@ -11,6 +11,28 @@
 
 #include <math.h>
 
+int time = 0;
+
+typedef struct particula{
+  double x;
+  double y;
+  double z;
+  double velocity;
+} Particula;
+
+Particula * vetor;
+
+void iniciarParticula(int nParticulas){
+  vetor = malloc(sizeof(Particula)*nParticulas);
+  int i;
+
+  for(i=0;i<nParticulas;i++){
+    vetor[i].y = 10;
+    vetor[i].x = (rand() % 6) * (rand() % 6 == 0 ? 1 :-1);
+    vetor[i].z = (rand() % 6) * (rand() % 6 == 0 ? 1 :-1);
+  }
+}
+
 void changeSize(int w, int h) {
 
   // Prevent a divide by zero, when window is too short
@@ -40,23 +62,26 @@ float angle = 0.0f;
 
 void renderScene(void) {
 
+  float z = cos(angle) * 3;
+  float x = sin(angle) * 3;
+
   // Clear Color and Depth Buffers
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
   // Reset transformations
   glLoadIdentity();
   // Set the camera
-  gluLookAt(	100*sin(angle), 1.0f, cos(angle)+7.0f,
-      0.0f, 0.0f,  0.0f,
+  gluLookAt(6,20.0f, 20,
+      0.0, 0.0,  0.0,
       0.0f, 1.0f,  0.0f);
   glColor3d(1,1,1);
 
   glPushMatrix();
-    glTranslated(0,-1.2,-6);
+    glTranslated(1,1,1);
     glRotated(90,45,0,0);
     // tenho que fazer a rotação na câmera e não na esfera
     //glRotated(angle,0,0,1);
-    glutWireSphere(3,16,16);
+    glutWireSphere(6,10,10);
   glPopMatrix();
 
   angle+=0.1f;
@@ -66,6 +91,7 @@ void renderScene(void) {
 
 int main(int argc, char **argv) {
 
+  iniciarParticula(atoi(argv[1]));
   // init GLUT and create window
   glutInit(&argc, argv);
   glutInitDisplayMode(GLUT_DEPTH | GLUT_DOUBLE | GLUT_RGBA);

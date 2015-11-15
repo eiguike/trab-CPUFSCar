@@ -35,6 +35,9 @@ void iniciarParticula(){
   int i;
 
   for(i=0;i<nParticulas;i++){
+    vetor[i].x = 0;
+    vetor[i].y = 30;
+    vetor[i].z = 1;
     vetor[i].y = 10 + funcaoBonita(0,6);
     vetor[i].x = funcaoBonita(-6,6) * (rand() % 2 == 0 ? 1 :-1);
     vetor[i].z = funcaoBonita(-6,6) * (rand() % 2 == 0 ? 1 :-1);
@@ -51,7 +54,13 @@ void renderizarParticulas(){
       //glRotated(angle,0,0,1);
       glutWireCube(0.1);
     glPopMatrix();
-    vetor[i].y = vetor[i].y - (vetor[i].y < -6 ? 0 : funcaoBonita(-0.2,0.4));
+    int raio = (vetor[i].x*vetor[i].x)+(vetor[i].y*vetor[i].y)+(vetor[i].z*vetor[i].z);
+
+    if(raio > 40){
+      vetor[i].y = vetor[i].y - funcaoBonita(-0.2,0.4);
+      printf("IGUALraio %d\n",raio);
+    }
+      printf("raio %d\n",raio);
   }
 
 }
@@ -101,7 +110,7 @@ void renderScene(void) {
 
   renderizarParticulas();
 
-  glColor3d(0,1,1);
+  glColor3d(0,1,0);
   glPushMatrix();
     //glTranslated(1,1,1);
     glRotated(90,45,0,0);
@@ -123,7 +132,7 @@ int main(int argc, char **argv) {
   glutInit(&argc, argv);
   glutInitDisplayMode(GLUT_DEPTH | GLUT_DOUBLE | GLUT_RGBA);
   glutInitWindowPosition(100,100);
-  glutInitWindowSize(320,320);
+  glutInitWindowSize(640,640);
   glutCreateWindow("Lighthouse3D- GLUT Tutorial");
   glEnable(GL_DEPTH_TEST);
 

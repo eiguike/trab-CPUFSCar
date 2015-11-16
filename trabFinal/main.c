@@ -64,10 +64,28 @@ void renderizarParticulas(){
       vetor[i].y =  vetor[i].y - (vetor[i].y < -9 ? 0 : handDouble(0,0.4));
     }else{
       vetor[i].y =  vetor[i].y - (vetor[i].y < -9 ? 0 : handDouble(0,0.4));
-      if (vetor[i].x > 0)
-        vetor[i].x = vetor[i].x + handDouble(1,3);
-      else if (vetor[i].x < 0)
-        vetor[i].x = vetor[i].x - handDouble(1,3);
+      if (vetor[i].x > 0){
+        vetor[i].x = vetor[i].x + handDouble(0,0.4);
+        if(vetor[i].z == 0)
+          vetor[i].z = 0;
+        else{
+          if (vetor[i].z > 0)
+            vetor[i].z = vetor[i].z + handDouble(0,0.4);
+          else
+            vetor[i].z = vetor[i].z - handDouble(0,0.4);
+        }
+      }
+      else if (vetor[i].x < 0){
+        vetor[i].x = vetor[i].x - handDouble(0,0.4);
+        if(vetor[i].z == 0)
+          vetor[i].z = 0;
+        else{
+          if (vetor[i].z > 0)
+            vetor[i].z = vetor[i].z + handDouble(0,0.4);
+          else
+            vetor[i].z = vetor[i].z - handDouble(0,0.4);
+        }
+      }
       else{
         if(vetor[i].z == 0)
           vetor[i].x = 0;

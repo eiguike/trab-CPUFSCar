@@ -27,7 +27,7 @@ typedef struct particula{
 
 Particula * vetor;
 
-double funcaoBonita(double min, double max){
+double handDouble(double min, double max){
   double aux = (double)rand()/(double)RAND_MAX * (max - min) + min;
   return aux;
 }
@@ -40,9 +40,9 @@ void iniciarParticula(){
     vetor[i].x = 0;
     vetor[i].y = 30;
     vetor[i].z = 1;
-    vetor[i].y = 10 + funcaoBonita(0,6);
-    vetor[i].x = funcaoBonita(-6,6) * (rand() % 2 == 0 ? 1 :-1);
-    vetor[i].z = funcaoBonita(-6,6) * (rand() % 2 == 0 ? 1 :-1);
+    vetor[i].y = 10 + handDouble(0,6);
+    vetor[i].x = handDouble(-6,6) * (rand() % 2 == 0 ? 1 :-1);
+    vetor[i].z = handDouble(-6,6) * (rand() % 2 == 0 ? 1 :-1);
   }
 }
 
@@ -61,7 +61,24 @@ void renderizarParticulas(){
     int raio = (vetor[i].x*vetor[i].x)+(vetor[i].y*vetor[i].y)+(vetor[i].z*vetor[i].z);
 
     if(raio > 36){
-      vetor[i].y =  vetor[i].y - (vetor[i].y < -9 ? 0 : funcaoBonita(0,0.4));
+      vetor[i].y =  vetor[i].y - (vetor[i].y < -9 ? 0 : handDouble(0,0.4));
+    }else{
+      vetor[i].y =  vetor[i].y - (vetor[i].y < -9 ? 0 : handDouble(0,0.4));
+      if (vetor[i].x > 0)
+        vetor[i].x = vetor[i].x + handDouble(1,3);
+      else if (vetor[i].x < 0)
+        vetor[i].x = vetor[i].x - handDouble(1,3);
+      else{
+        if(vetor[i].z == 0)
+          vetor[i].x = 0;
+        else{
+          if (vetor[i].z > 0)
+            vetor[i].z = vetor[i].z + handDouble(1,3);
+          else
+            vetor[i].z = vetor[i].z - handDouble(1,3);
+        }
+      }
+
     }
   }
 
@@ -116,7 +133,7 @@ void renderScene(void) {
   glPushMatrix();
     glRotated(90,45,0,0);
     // tenho que fazer a rotação na câmera e não na esfera
-    //glRotated(angle,0,0,1);
+    glRotated(angle,1,1,1);
     glutSolidSphere(6,100,100);
   glPopMatrix();
 

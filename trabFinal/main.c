@@ -58,9 +58,9 @@ void renderizarParticulas(){
     int raio = (vetor[i].x*vetor[i].x)+(vetor[i].y*vetor[i].y)+(vetor[i].z*vetor[i].z);
 
     if(raio > 36){
-      vetor[i].y =  vetor[i].y - (vetor[i].y < -9 ? 0 : handDouble(0,0.2));
+      vetor[i].y =  vetor[i].y - (vetor[i].y < -9 ? 0 : handDouble(0.04,0.2));
     }else{
-      vetor[i].y =  vetor[i].y - (vetor[i].y < -9 ? 0 : handDouble(0,0.1));
+      vetor[i].y =  vetor[i].y - (vetor[i].y < -9 ? 0 : handDouble(0.04,0.04));
       if (vetor[i].x > 0){
         vetor[i].x = vetor[i].x + handDouble(0,0.1);
         if(vetor[i].z == 0)
@@ -73,14 +73,14 @@ void renderizarParticulas(){
         }
       }
       else if (vetor[i].x < 0){
-        vetor[i].x = vetor[i].x - handDouble(0,0.4);
+        vetor[i].x = vetor[i].x - handDouble(0,0.1);
         if(vetor[i].z == 0)
           vetor[i].z = 0;
         else{
           if (vetor[i].z > 0)
-            vetor[i].z = vetor[i].z + handDouble(0,0.4);
+            vetor[i].z = vetor[i].z + handDouble(0,0.1);
           else
-            vetor[i].z = vetor[i].z - handDouble(0,0.4);
+            vetor[i].z = vetor[i].z - handDouble(0,0.1);
         }
       }
       else{
@@ -88,9 +88,9 @@ void renderizarParticulas(){
           vetor[i].x = 0;
         else{
           if (vetor[i].z > 0)
-            vetor[i].z = vetor[i].z + handDouble(1,3);
+            vetor[i].z = vetor[i].z + handDouble(0,0.1);
           else
-            vetor[i].z = vetor[i].z - handDouble(1,3);
+            vetor[i].z = vetor[i].z - handDouble(0,0.1);
         }
       }
 

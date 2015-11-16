@@ -37,12 +37,9 @@ void iniciarParticula(){
   int i;
 
   for(i=0;i<nParticulas;i++){
-    vetor[i].x = 0;
-    vetor[i].y = 30;
-    vetor[i].z = 1;
     vetor[i].y = 10 + handDouble(0,6);
-    vetor[i].x = handDouble(-6,6) * (rand() % 2 == 0 ? 1 :-1);
-    vetor[i].z = handDouble(-6,6) * (rand() % 2 == 0 ? 1 :-1);
+    vetor[i].x = handDouble(-7,7) * (rand() % 2 == 0 ? 1 :-1);
+    vetor[i].z = handDouble(-7,7) * (rand() % 2 == 0 ? 1 :-1);
   }
 }
 
@@ -61,18 +58,18 @@ void renderizarParticulas(){
     int raio = (vetor[i].x*vetor[i].x)+(vetor[i].y*vetor[i].y)+(vetor[i].z*vetor[i].z);
 
     if(raio > 36){
-      vetor[i].y =  vetor[i].y - (vetor[i].y < -9 ? 0 : handDouble(0,0.4));
+      vetor[i].y =  vetor[i].y - (vetor[i].y < -9 ? 0 : handDouble(0,0.2));
     }else{
-      vetor[i].y =  vetor[i].y - (vetor[i].y < -9 ? 0 : handDouble(0,0.4));
+      vetor[i].y =  vetor[i].y - (vetor[i].y < -9 ? 0 : handDouble(0,0.1));
       if (vetor[i].x > 0){
-        vetor[i].x = vetor[i].x + handDouble(0,0.4);
+        vetor[i].x = vetor[i].x + handDouble(0,0.1);
         if(vetor[i].z == 0)
           vetor[i].z = 0;
         else{
           if (vetor[i].z > 0)
-            vetor[i].z = vetor[i].z + handDouble(0,0.4);
+            vetor[i].z = vetor[i].z + handDouble(0,0.1);
           else
-            vetor[i].z = vetor[i].z - handDouble(0,0.4);
+            vetor[i].z = vetor[i].z - handDouble(0,0.1);
         }
       }
       else if (vetor[i].x < 0){

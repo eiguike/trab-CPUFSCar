@@ -2,6 +2,8 @@
 // para compilar:
 // gcc main.c -o main -lGL -lGLU -lglut -lm
 //
+// para instalar as bibliotecas necessárias
+// sudo apt-get install freeglut3-dev
 
 #ifdef __APPLE__
 #include <GLUT/glut.h>
@@ -52,15 +54,15 @@ void renderizarParticulas(){
       glTranslated(vetor[i].x,vetor[i].y,vetor[i].z);
       // tenho que fazer a rotação na câmera e não na esfera
       //glRotated(angle,0,0,1);
-      glutWireCube(0.1);
+      glutWireCube(0.05);
     glPopMatrix();
+
+    // colisão com a esfera
     int raio = (vetor[i].x*vetor[i].x)+(vetor[i].y*vetor[i].y)+(vetor[i].z*vetor[i].z);
 
-    if(raio > 40){
-      vetor[i].y = vetor[i].y - funcaoBonita(-0.2,0.4);
-      printf("IGUALraio %d\n",raio);
+    if(raio > 36){
+      vetor[i].y =  vetor[i].y - (vetor[i].y < -9 ? 0 : funcaoBonita(0,0.4));
     }
-      printf("raio %d\n",raio);
   }
 
 }
@@ -112,11 +114,10 @@ void renderScene(void) {
 
   glColor3d(0,1,0);
   glPushMatrix();
-    //glTranslated(1,1,1);
     glRotated(90,45,0,0);
     // tenho que fazer a rotação na câmera e não na esfera
     //glRotated(angle,0,0,1);
-    glutSolidSphere(6,10,10);
+    glutSolidSphere(6,100,100);
   glPopMatrix();
 
   angle+=0.1f;
@@ -133,7 +134,7 @@ int main(int argc, char **argv) {
   glutInitDisplayMode(GLUT_DEPTH | GLUT_DOUBLE | GLUT_RGBA);
   glutInitWindowPosition(100,100);
   glutInitWindowSize(640,640);
-  glutCreateWindow("Lighthouse3D- GLUT Tutorial");
+  glutCreateWindow("Trabalho Final - Computação Paralela");
   glEnable(GL_DEPTH_TEST);
 
   // register callbacks

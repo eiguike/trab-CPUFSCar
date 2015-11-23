@@ -12,12 +12,13 @@
 //
 // para instalar as bibliotecas necessárias
 // sudo apt-get install freeglut3-dev
+//
+// instale este aplicativo:
+// sudo apt-get install mesa-utils
+// e execute sem  vsync:
+// vblank_mode=0 ./main 1000
 
-#ifdef __APPLE__
-#include <GLUT/glut.h>
-#else
 #include <GL/glut.h>
-#endif
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -25,6 +26,9 @@
 #include <time.h>
 
 int nParticulas;
+
+int tempo;
+int frame = 0, timebase = 0;
 
 typedef struct particula{
   double x;
@@ -135,6 +139,8 @@ void changeSize(int w, int h) {
 float angle = 0.0f;
 
 void renderScene(void) {
+  char s [100];
+  void * font;
 
   float z = cos(angle) * 3;
   float x = sin(angle) * 3;
@@ -161,6 +167,17 @@ void renderScene(void) {
   glPopMatrix();
 
   angle+=0.1f;
+
+  frame++;
+  tempo = glutGet(GLUT_ELAPSED_TIME);
+  if (tempo - timebase > 1000){
+    sprintf(s,"FPS: %4.2f", frame * 1000.0/(tempo-timebase));
+    printf("%s\n",s);
+    timebase = tempo;
+    frame = 0;
+  }else{
+    frame++;
+  }
 
   glutSwapBuffers();
 }

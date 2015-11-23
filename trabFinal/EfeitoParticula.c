@@ -18,12 +18,16 @@
 // e execute sem  vsync:
 // vblank_mode=0 ./main 1000
 
-#include <GL/glut.h>
+#include <GL/freeglut.h>
+#include <GL/gl.h>
 
 #include <stdlib.h>
 #include <stdio.h>
 #include <math.h>
 #include <time.h>
+#include <unistd.h>
+
+#include <pthread.h>
 
 int nParticulas;
 
@@ -44,6 +48,7 @@ double handDouble(double min, double max){
   return aux;
 }
 
+// função que inicia as posições de cada partícula
 void iniciarParticula(){
   vetor = malloc(sizeof(Particula)*nParticulas);
   int i;
@@ -55,9 +60,11 @@ void iniciarParticula(){
   }
 }
 
-void renderizarParticulas(){
+void *  renderizarParticulas(){
   int i;
-
+  while(1){
+      glColor3d(1,1,1);
+  usleep(10000);
   for(i=0;i<nParticulas;i++){
     glPushMatrix();
       glTranslated(vetor[i].x,vetor[i].y,vetor[i].z);
@@ -65,7 +72,6 @@ void renderizarParticulas(){
       //glRotated(angle,0,0,1);
       glutWireCube(0.05);
     glPopMatrix();
-
     // colisão com a esfera
     int raio = (vetor[i].x*vetor[i].x)+(vetor[i].y*vetor[i].y)+(vetor[i].z*vetor[i].z);
 
@@ -108,6 +114,7 @@ void renderizarParticulas(){
 
     }
   }
+  }
 
 }
 
@@ -140,6 +147,7 @@ float angle = 0.0f;
 
 void renderScene(void) {
   char s [100];
+  int i;
   void * font;
 
   float z = cos(angle) * 3;
@@ -147,6 +155,15 @@ void renderScene(void) {
 
   // Clear Color and Depth Buffers
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+//  for(i=0;i<nParticulas;i++){
+//    glColor3d(1,1,1);
+//    glPushMatrix();
+//      glTranslated(vetor[i].x,vetor[i].y,vetor[i].z);
+//      // tenho que fazer a rotação na câmera e não na esfera
+//      //glRotated(angle,0,0,1);
+//      glutWireCube(0.05);
+//    glPopMatrix();
+//  }
 
   // Reset transformations
   glLoadIdentity();
@@ -155,8 +172,6 @@ void renderScene(void) {
       0.0, 0.0,  0.0,
       0.0f, 1.0f,  0.0f);
   glColor3d(1,1,1);
-
-  renderizarParticulas();
 
   glColor3d(0,1,0);
   glPushMatrix();
@@ -183,9 +198,19 @@ void renderScene(void) {
 }
 
 int main(int argc, char **argv) {
+  pthread_t threads[2];
+
+  if(argc != 3){
+    printf("Usage: %s <number of particles> <number of threads>\n",argv[0]);
+    return 0;
+  }
+
+  printf("THREADS: %s\n",argv[2]);
+
   nParticulas = atoi(argv[1]);
   srand(time(NULL));
   iniciarParticula();
+
   // init GLUT and create window
   glutInit(&argc, argv);
   glutInitDisplayMode(GLUT_DEPTH | GLUT_DOUBLE | GLUT_RGBA);
@@ -193,6 +218,8 @@ int main(int argc, char **argv) {
   glutInitWindowSize(640,640);
   glutCreateWindow("Trabalho Final - Computação Paralela");
   glEnable(GL_DEPTH_TEST);
+
+  pthread_create(&threads[0], NULL, renderizarParticulas, NULL);
 
   // register callbacks
   glutDisplayFunc(renderScene);

@@ -20,7 +20,7 @@
 
 #include <GL/freeglut.h>
 #include <GL/gl.h>
-
+#include <GL/glx.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <math.h>
@@ -33,6 +33,8 @@ int nParticulas;
 
 int tempo;
 int frame = 0, timebase = 0;
+
+double * vetor2;
 
 typedef struct particula{
   double x;
@@ -51,75 +53,71 @@ double handDouble(double min, double max){
 // função que inicia as posições de cada partícula
 void iniciarParticula(){
   vetor = malloc(sizeof(Particula)*nParticulas);
+
+  vetor2 = malloc(sizeof(double)*3*nParticulas);
+
   int i;
 
   for(i=0;i<nParticulas;i++){
-    vetor[i].y = 10 + handDouble(0,6);
-    vetor[i].x = handDouble(-7,7) * (rand() % 2 == 0 ? 1 :-1);
-    vetor[i].z = handDouble(-7,7) * (rand() % 2 == 0 ? 1 :-1);
+    vetor2[i*3+1] = 10 + handDouble(0,30);
+    vetor2[i*3] = handDouble(-7,7) * (rand() % 2 == 0 ? 1 :-1);
+    vetor2[i*3+2] = handDouble(-7,7) * (rand() % 2 == 0 ? 1 :-1);
   }
 }
 
 void *  renderizarParticulas(){
   int i;
   while(1){
-    glColor3d(1,1,1);
-    usleep(10000);
     for(i=0;i<nParticulas;i++){
-      glPushMatrix();
-      glTranslated(vetor[i].x,vetor[i].y,vetor[i].z);
-      // tenho que fazer a rotação na câmera e não na esfera
-      //glRotated(angle,0,0,1);
-      glutWireCube(0.05);
-      glPopMatrix();
       // colisão com a esfera
-      int raio = (vetor[i].x*vetor[i].x)+(vetor[i].y*vetor[i].y)+(vetor[i].z*vetor[i].z);
+      int raio = (vetor2[i*3]*vetor2[i*3])+(vetor2[i*3+1]*vetor2[i*3+1])+(vetor2[i*3+2]*vetor2[i*3+2]);
 
       if(raio > 36){
-        vetor[i].y =  vetor[i].y - (vetor[i].y < -9 ? 0 : handDouble(0.04,0.2));
+        vetor2[i*3+1] =  vetor2[i*3+1] - (vetor2[i*3+1] < -9 ? 0 : handDouble(0.04,0.2));
       }else{
-        vetor[i].y =  vetor[i].y - (vetor[i].y < -9 ? 0 : handDouble(0.04,0.04));
-        if (vetor[i].x > 0){
-          vetor[i].x = vetor[i].x + handDouble(0,0.1);
-          if(vetor[i].z == 0)
-            vetor[i].z = 0;
+        vetor2[i*3+1] =  vetor2[i*3+1] - (vetor2[i*3+1] < -9 ? 0 : handDouble(0.04,0.04));
+        if (vetor2[i*3] > 0){
+          vetor2[i*3] = vetor2[i*3] + handDouble(0,0.1);
+          if(vetor2[i*3+2] == 0)
+            vetor2[i*3+2] = 0;
           else{
-            if (vetor[i].z > 0)
-              vetor[i].z = vetor[i].z + handDouble(0,0.1);
+            if (vetor2[i*3+2] > 0)
+              vetor2[i*3+2] = vetor2[i*3+2] + handDouble(0,0.1);
             else
-              vetor[i].z = vetor[i].z - handDouble(0,0.1);
+              vetor2[i*3+2] = vetor2[i*3+2] - handDouble(0,0.1);
           }
         }
-        else if (vetor[i].x < 0){
-          vetor[i].x = vetor[i].x - handDouble(0,0.1);
-          if(vetor[i].z == 0)
-            vetor[i].z = 0;
+        else if (vetor2[i*3] < 0){
+          vetor2[i*3] = vetor2[i*3] - handDouble(0,0.1);
+          if(vetor2[i*3+2] == 0)
+            vetor2[i*3+2] = 0;
           else{
-            if (vetor[i].z > 0)
-              vetor[i].z = vetor[i].z + handDouble(0,0.1);
+            if (vetor2[i*3+2] > 0)
+              vetor2[i*3+2] = vetor2[i*3+2] + handDouble(0,0.1);
             else
-              vetor[i].z = vetor[i].z - handDouble(0,0.1);
+              vetor2[i*3+2] = vetor2[i*3+2] - handDouble(0,0.1);
           }
         }
         else{
-          if(vetor[i].z == 0)
-            vetor[i].x = 0;
+          if(vetor2[i*3+2] == 0)
+            vetor2[i*3] = 0;
           else{
-            if (vetor[i].z > 0)
-              vetor[i].z = vetor[i].z + handDouble(0,0.1);
+            if (vetor2[i*3+2] > 0)
+              vetor2[i*3+2] = vetor2[i*3+2] + handDouble(0,0.1);
             else
-              vetor[i].z = vetor[i].z - handDouble(0,0.1);
+              vetor2[i*3+2] = vetor2[i*3+2] - handDouble(0,0.1);
           }
         }
 
       }
     }
+
+
   }
 
 }
 
 void changeSize(int w, int h) {
-
   // Prevent a divide by zero, when window is too short
   // (you cant make a window of zero width).
   if (h == 0)
@@ -150,21 +148,14 @@ void renderScene(void) {
   int i;
   void * font;
 
-  float z = cos(angle) * 3;
-  float x = sin(angle) * 3;
+  glEnableClientState(GL_VERTEX_ARRAY);
+  glVertexPointer(3, GL_DOUBLE, 0, vetor2);
 
   // Clear Color and Depth Buffers
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-  //  for(i=0;i<nParticulas;i++){
-  //    glColor3d(1,1,1);
-  //    glPushMatrix();
-  //      glTranslated(vetor[i].x,vetor[i].y,vetor[i].z);
-  //      // tenho que fazer a rotação na câmera e não na esfera
-  //      //glRotated(angle,0,0,1);
-  //      glutWireCube(0.05);
-  //    glPopMatrix();
-  //  }
+  glColor3d(1,1,1);
 
+  glDrawArrays(GL_POINTS, 0, nParticulas);
   // Reset transformations
   glLoadIdentity();
   // Set the camera
@@ -175,9 +166,9 @@ void renderScene(void) {
 
   glColor3d(0,1,0);
   glPushMatrix();
-  glRotated(90,45,0,0);
+  //glRotated(90,45,0,0);
   // tenho que fazer a rotação na câmera e não na esfera
-  glRotated(angle,1,1,1);
+  //glRotated(angle,1,1,1);
   glutSolidSphere(6,100,100);
   glPopMatrix();
 
@@ -218,6 +209,7 @@ int main(int argc, char **argv) {
   glutInitWindowSize(640,640);
   glutCreateWindow("Trabalho Final - Computação Paralela");
   glEnable(GL_DEPTH_TEST);
+
 
   pthread_create(&threads[0], NULL, renderizarParticulas, NULL);
 

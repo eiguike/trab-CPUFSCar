@@ -27,6 +27,8 @@
 #include <time.h>
 #include <pthread.h>
 
+#include "timer.h"
+
 typedef struct arg{
   int inicio;
   int final;
@@ -189,11 +191,13 @@ void renderScene(void) {
 // rotina principal
 int main(int argc, char **argv) {
 
+  double start, finish;
   if(argc != 2){
     printf("Usage: %s <number of particles>\n",argv[0]);
     return 0;
   }
 
+  GET_TIME(start);
   // recebe o número de partículas que devem ser processadas
   // e posteriormente renderizadas
   nParticulas = atoi(argv[1]);
@@ -217,7 +221,12 @@ int main(int argc, char **argv) {
   glutIdleFunc(renderScene);
 
   // função que mantém o loop de renderização
-  glutMainLoop();
+  glutMainLoopEvent();
+  renderScene();
+
+  GET_TIME(finish);
+
+  printf("Tempo gasto: %f\n", (finish - start));
 
   return 1;
 }

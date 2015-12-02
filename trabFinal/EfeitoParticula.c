@@ -8,7 +8,7 @@
 // Programa Sequencial
 //
 // para compilar:
-// gcc main.c -o main -lGL -lGLU -lglut -lm
+// gcc EfeitoParticula.c -o EfeitoParticula -lGL -lGLU -lglut -lm -lpthread
 //
 // para instalar as bibliotecas necessárias
 // sudo apt-get install freeglut3-dev
@@ -26,6 +26,8 @@
 #include <math.h>
 #include <time.h>
 #include <pthread.h>
+
+#include "timer.h"
 
 typedef struct arg{
   int inicio;
@@ -119,6 +121,8 @@ void * renderizarParticulas(Arg * argumento){
     }
   }
   printf("Finalizei\n");
+
+  return NULL;
 }
 
 // função que não permite que a imagem renderizada
@@ -185,6 +189,8 @@ void renderScene(void) {
 // rotina principal
 int main(int argc, char **argv) {
 
+  double start, finish;
+
   if(argc != 3){
     printf("Usage: %s <number of particles> <number of threads>\n",argv[0]);
     return 0;
@@ -211,7 +217,7 @@ int main(int argc, char **argv) {
     argumento[i].inicio = argumento[i-1].final +1;
     argumento[i].final = divisao*(i+1);
   }
-  argumento[i-1].final = nParticulas;
+  //argumento[i-1].final = nParticulas;
 
   // define posição inicial das particulas
   iniciarParticula();
@@ -224,12 +230,13 @@ int main(int argc, char **argv) {
   glutInitWindowSize(640,640);
   glutCreateWindow("Trabalho Final - Computação Paralela");
   glEnable(GL_DEPTH_TEST);
-
+  
+  GET_TIME(start);
   // chamada das threads
   for(i=0;i<NTHREADS;i++){
     pthread_create(&threads[i], NULL, (void*)renderizarParticulas, (Arg*)&argumento[i]);
   }
-
+  
   // definindo as funções que devem ser executadas
   // para uma determinada ação
   glutDisplayFunc(renderScene);
@@ -238,6 +245,14 @@ int main(int argc, char **argv) {
 
   // função que mantém o loop de renderização
   glutMainLoop();
+
+  
+  for(i=0;i<NTHREADS; i++){
+    pthread_join(threads[i], NULL);
+  }
+  GET_TIME(finish);
+
+  printf("Tempo gasto: %f\n", (finish - start));
 
   return 1;
 }

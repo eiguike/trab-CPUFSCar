@@ -61,8 +61,8 @@ void iniciarParticula(){
 
   for(i=0;i<nParticulas;i++){
     vetor2[i*3+1] = 10 + handDouble(0,30);
-    vetor2[i*3] = handDouble(-7,7) * (rand() % 2 == 0 ? 1 :-1);
-    vetor2[i*3+2] = handDouble(-7,7) * (rand() % 2 == 0 ? 1 :-1);
+    vetor2[i*3] = handDouble(-6,6) * (rand() % 2 == 0 ? 1 :-1);
+    vetor2[i*3+2] = handDouble(-6,6) * (rand() % 2 == 0 ? 1 :-1);
   }
 }
 
@@ -164,15 +164,9 @@ void renderScene(void) {
   // Reset transformations
   glLoadIdentity();
   // Set the camera
-  gluLookAt(6,20.0f, 30,
+  gluLookAt(10,-7.0f, 20,
       0.0, 0.0,  0.0,
       0.0f, 1.0f,  0.0f);
-  glColor3d(1,1,1);
-
-  glColor3d(0,1,0);
-  glPushMatrix();
-  glutSolidSphere(6,100,100);
-  glPopMatrix();
 
   frame++;
   tempo = glutGet(GLUT_ELAPSED_TIME);
@@ -214,9 +208,10 @@ int main(int argc, char **argv) {
   argumento[0].final = divisao;
 
   for(i=1;i<NTHREADS;i++){
-    argumento[i].inicio = divisao*i +1;
+    argumento[i].inicio = argumento[i-1].final +1;
     argumento[i].final = divisao*(i+1);
   }
+  argumento[i-1].final = nParticulas;
 
   // define posição inicial das particulas
   iniciarParticula();
@@ -235,7 +230,8 @@ int main(int argc, char **argv) {
     pthread_create(&threads[i], NULL, (void*)renderizarParticulas, (Arg*)&argumento[i]);
   }
 
-  // register callbacks
+  // definindo as funções que devem ser executadas
+  // para uma determinada ação
   glutDisplayFunc(renderScene);
   glutReshapeFunc(changeSize);
   glutIdleFunc(renderScene);

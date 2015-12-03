@@ -1,12 +1,11 @@
 //----------------------------------------------
-//  Trabalho Final - Efeito Particula 
+//  Trabalho Final - Efeito Particula
 //  Gustavo Rodrigues Almeida       RA: 489999
 //  Henrique Teruo Eihara           RA: 490016
 //  Marcello da Costa Marques Acar  RA: 552550
 //----------------------------------------------
 //
 // Programa Sequencial
-//
 // para compilar:
 // gcc EfeitoParticula.c -o EfeitoParticula -lGL -lGLU -lglut -lm -lpthread
 //
@@ -39,6 +38,7 @@ int nParticulas;
 
 // número de threads
 int NTHREADS;
+int threadsFinalizadas = 0;
 
 // variáveis necessárias para realizar
 // o cálculo de fps
@@ -121,6 +121,7 @@ void * renderizarParticulas(Arg * argumento){
     }
   }
   printf("Finalizei\n");
+  threadsFinalizadas++;
 
   return NULL;
 }
@@ -201,7 +202,6 @@ int main(int argc, char **argv) {
 
   // recebe o número de threads que devem ser criadas
   NTHREADS = atoi(argv[2]);
-
   pthread_t * threads = malloc(sizeof(pthread_t)*NTHREADS);
 
   // recebe o número de partículas que devem ser processadas
@@ -230,23 +230,23 @@ int main(int argc, char **argv) {
   glutInitWindowSize(640,640);
   glutCreateWindow("Trabalho Final - Computação Paralela");
   glEnable(GL_DEPTH_TEST);
-  
+
   GET_TIME(start);
   // chamada das threads
   for(i=0;i<NTHREADS;i++){
     pthread_create(&threads[i], NULL, (void*)renderizarParticulas, (Arg*)&argumento[i]);
   }
-  
+
   // definindo as funções que devem ser executadas
   // para uma determinada ação
-  glutDisplayFunc(renderScene);
   glutReshapeFunc(changeSize);
-  glutIdleFunc(renderScene);
 
   // função que mantém o loop de renderização
-  glutMainLoop();
+  while(NTHREADS > threadsFinalizadas){
+    glutMainLoopEvent();
+    renderScene();
+  }
 
-  
   for(i=0;i<NTHREADS; i++){
     pthread_join(threads[i], NULL);
   }

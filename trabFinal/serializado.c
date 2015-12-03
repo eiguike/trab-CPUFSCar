@@ -37,7 +37,7 @@ typedef struct arg{
 // número de particulas
 int nParticulas;
 
-int flag = 0;
+int nParticulasAux;
 
 // número de threads
 int NTHREADS;
@@ -47,9 +47,13 @@ int NTHREADS;
 int tempo;
 int frame = 0, timebase = 0;
 
+int flag = 0;
+int flag_final = 0;
+
 // variável que contem a posição em
 // x, y e z da partícula
 double * vetor2;
+int * vetor;
 
 // função que retorna o valor aleatório de um intervaldo
 // em double
@@ -73,50 +77,59 @@ void iniciarParticula(){
 // função que calcula a nova posição da partícula
 void * renderizarParticulas(){
   int i;
-    for(i=0;i<nParticulas;i++){
-      int raio = (vetor2[i*3]*vetor2[i*3])+(vetor2[i*3+1]*vetor2[i*3+1])+(vetor2[i*3+2]*vetor2[i*3+2]);
 
-      if(raio > 36){
-        vetor2[i*3+1] =  vetor2[i*3+1] - (vetor2[i*3+1] < -9 ? 0 : handDouble(0.04,0.2));
-      }else{
-        vetor2[i*3+1] =  vetor2[i*3+1] - (vetor2[i*3+1] < -9 ? 0 : handDouble(0.04,0.04));
-        if (vetor2[i*3] > 0){
-          vetor2[i*3] = vetor2[i*3] + handDouble(0,0.1);
-          if(vetor2[i*3+2] == 0)
-            vetor2[i*3+2] = 0;
-          else{
-            if (vetor2[i*3+2] > 0)
-              vetor2[i*3+2] = vetor2[i*3+2] + handDouble(0,0.1);
-            else
-              vetor2[i*3+2] = vetor2[i*3+2] - handDouble(0,0.1);
-          }
-        }
-        else if (vetor2[i*3] < 0){
-          vetor2[i*3] = vetor2[i*3] - handDouble(0,0.1);
-          if(vetor2[i*3+2] == 0)
-            vetor2[i*3+2] = 0;
-          else{
-            if (vetor2[i*3+2] > 0)
-              vetor2[i*3+2] = vetor2[i*3+2] + handDouble(0,0.1);
-            else
-              vetor2[i*3+2] = vetor2[i*3+2] - handDouble(0,0.1);
-          }
-        }
+  nParticulasAux = 0;
+
+  for(i=0;i<nParticulas;i++){
+    int raio = (vetor2[i*3]*vetor2[i*3])+(vetor2[i*3+1]*vetor2[i*3+1])+(vetor2[i*3+2]*vetor2[i*3+2]);
+
+    if(raio > 36){
+      vetor2[i*3+1] =  vetor2[i*3+1] - (vetor2[i*3+1] < -9 ? 0 : handDouble(0.04,0.2));
+    }else{
+      vetor2[i*3+1] =  vetor2[i*3+1] - (vetor2[i*3+1] < -9 ? 0 : handDouble(0.04,0.04));
+      if (vetor2[i*3] > 0){
+        vetor2[i*3] = vetor2[i*3] + handDouble(0,0.1);
+        if(vetor2[i*3+2] == 0)
+          vetor2[i*3+2] = 0;
         else{
-          if(vetor2[i*3+2] == 0)
-            vetor2[i*3] = 0;
-          else{
-            if (vetor2[i*3+2] > 0)
-              vetor2[i*3+2] = vetor2[i*3+2] + handDouble(0,0.1);
-            else
-              vetor2[i*3+2] = vetor2[i*3+2] - handDouble(0,0.1);
-          }
+          if (vetor2[i*3+2] > 0)
+            vetor2[i*3+2] = vetor2[i*3+2] + handDouble(0,0.1);
+          else
+            vetor2[i*3+2] = vetor2[i*3+2] - handDouble(0,0.1);
         }
-
       }
-      if(vetor2[i*3+1] > -9)
-        flag = 1;
+      else if (vetor2[i*3] < 0){
+        vetor2[i*3] = vetor2[i*3] - handDouble(0,0.1);
+        if(vetor2[i*3+2] == 0)
+          vetor2[i*3+2] = 0;
+        else{
+          if (vetor2[i*3+2] > 0)
+            vetor2[i*3+2] = vetor2[i*3+2] + handDouble(0,0.1);
+          else
+            vetor2[i*3+2] = vetor2[i*3+2] - handDouble(0,0.1);
+        }
+      }
+      else{
+        if(vetor2[i*3+2] == 0)
+          vetor2[i*3] = 0;
+        else{
+          if (vetor2[i*3+2] > 0)
+            vetor2[i*3+2] = vetor2[i*3+2] + handDouble(0,0.1);
+          else
+            vetor2[i*3+2] = vetor2[i*3+2] - handDouble(0,0.1);
+        }
+      }
+
     }
+    if(vetor2[i*3+1] > -9)
+      flag = 1;
+    else
+      nParticulasAux++;
+  }
+
+  if(nParticulasAux == nParticulas)
+    flag_final = 1;
+
 }
 
 // função que não permite que a imagem renderizada
@@ -164,15 +177,9 @@ void renderScene(void) {
   // Reset transformations
   glLoadIdentity();
   // Set the camera
-  gluLookAt(6,20.0f, 30,
+  gluLookAt(10,-7.0f, 20,
       0.0, 0.0,  0.0,
       0.0f, 1.0f,  0.0f);
-  glColor3d(1,1,1);
-
-  glColor3d(0,1,0);
-  glPushMatrix();
-  glutSolidSphere(6,100,100);
-  glPopMatrix();
 
   frame++;
   tempo = glutGet(GLUT_ELAPSED_TIME);
@@ -197,10 +204,10 @@ int main(int argc, char **argv) {
     return 0;
   }
 
-  GET_TIME(start);
   // recebe o número de partículas que devem ser processadas
   // e posteriormente renderizadas
   nParticulas = atoi(argv[1]);
+  nParticulasAux = nParticulas;
   int i;
 
   // define posição inicial das particulas
@@ -215,14 +222,19 @@ int main(int argc, char **argv) {
   glutCreateWindow("Trabalho Final - Computação Paralela");
   glEnable(GL_DEPTH_TEST);
 
+  GET_TIME(start);
+
   // register callbacks
   glutDisplayFunc(renderScene);
   glutReshapeFunc(changeSize);
   glutIdleFunc(renderScene);
 
   // função que mantém o loop de renderização
-  glutMainLoopEvent();
-  renderScene();
+  while(!flag_final)
+  {
+    glutMainLoopEvent();
+    renderScene();
+  }
 
   GET_TIME(finish);
 

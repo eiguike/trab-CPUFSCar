@@ -120,7 +120,7 @@ void * renderizarParticulas(Arg * argumento){
 
     }
   }
-  printf("Finalizei\n");
+
   threadsFinalizadas++;
 
   return NULL;

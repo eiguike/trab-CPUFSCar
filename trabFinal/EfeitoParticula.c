@@ -80,17 +80,8 @@ void * renderizarParticulas(Arg * argumento){
   int flag = 1;
   int meuID = 0;
 
-  for(i = 0; i < NTHREADS; i++)
-  {
-    if(vetor_id[i] == (int)pthread_self())
-    {
-      meuID = i;
-    }
-  }
-
   while(1 && flag){
     flag = 0;
-    vetor_func[meuID] = 0;
 
     for(i=argumento->inicio;i<argumento->final;i++){
       int raio = (vetor2[i*3]*vetor2[i*3])+(vetor2[i*3+1]*vetor2[i*3+1])+(vetor2[i*3+2]*vetor2[i*3+2]);
@@ -137,9 +128,6 @@ void * renderizarParticulas(Arg * argumento){
         flag = 1;
 
     }
-
-    vetor_func[meuID] = 1;
-    sem_wait(&bloqueio);
   }
 
   threadsFinalizadas++;
@@ -225,14 +213,6 @@ int main(int argc, char **argv) {
   // recebe o número de threads que devem ser criadas
   NTHREADS = atoi(argv[2]);
   pthread_t * threads = malloc(sizeof(pthread_t)*NTHREADS);
-  vetor_func = malloc(sizeof(int)*NTHREADS);
-  vetor_id = malloc(sizeof(int)*NTHREADS);
-
-  for(i = 0; i<NTHREADS; i++)
-  {
-    vetor_func[i] = 0;
-    vetor_id[i] = 0;
-  }
 
   // recebe o número de partículas que devem ser processadas
   // e posteriormente renderizadas
@@ -264,7 +244,6 @@ int main(int argc, char **argv) {
   // chamada das threads
   for(i=0;i<NTHREADS;i++){
     pthread_create(&threads[i], NULL, (void*)renderizarParticulas, (Arg*)&argumento[i]);
-    vetor_id[i] = (int)threads[i];
   }
 
   // definindo as funções que devem ser executadas
@@ -272,29 +251,10 @@ int main(int argc, char **argv) {
   glutReshapeFunc(changeSize);
 
   // função que mantém o loop de renderização
-  while(NTHREADS > threadsFinalizadas){
-
-    while(1)
-    {
-      threadsAux = 0;
-      for(i = 0; i < NTHREADS; i++)
-      {
-        if(vetor_func[i] == 1)
-        {
-          threadsAux++;
-        }
-      }
-
-      if(threadsAux == NTHREADS)
-      {
-        break;
-      }
-    }
-
+  while(NTHREADS > threadsFinalizadas)
+  {
     glutMainLoopEvent();
     renderScene();
-
-    sem_post(&bloqueio);
   }
 
   for(i=0;i<NTHREADS; i++){

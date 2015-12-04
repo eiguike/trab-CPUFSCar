@@ -7,16 +7,16 @@
 //
 // Programa Sequencial
 //
-// para compilar:
-// gcc main.c -o main -lGL -lGLU -lglut -lm
+// Para compilar:
+// gcc serializado.c -o serial -lGL -lGLU -lglut -lm
 //
-// para instalar as bibliotecas necessárias
-// sudo apt-get install freeglut3-dev
+// Para instalar as bibliotecas necessárias do glut utiliza-se:
+//    sudo apt-get install freeglut3-dev
 //
-// instale este aplicativo:
-// sudo apt-get install mesa-utils
-// e execute sem  vsync:
-// vblank_mode=0 ./main 1000
+// Para executar o programa sem vsync, deve-se instalar:
+//    sudo apt-get install mesa-utils
+// e executar:
+//    vblank_mode=0 ./serial <Número de Partículas>
 
 #include <GL/freeglut.h>
 #include <GL/gl.h>
@@ -29,40 +29,34 @@
 
 #include "timer.h"
 
-typedef struct arg{
-  int inicio;
-  int final;
-}Arg;
-
-// número de particulas
+// Número de partículas (informado pelo usuário)
 int nParticulas;
 
+// Número auxiliar de partículas (para saber se a execução do programa chegou ao fim, ou seja, se as partículas estão no chão)
 int nParticulasAux;
 
-// número de threads
-int NTHREADS;
-
-// variáveis necessárias para realizar
-// o cálculo de fps
+// Variáveis necessárias para a realização
+// Do cálculo de Frames Per Second
 int tempo;
 int frame = 0, timebase = 0;
 
-int flag = 0;
-int flag_final = 0;
+// Flag utilizadas para a finalização do programa
+int Flag = 0;
 
-// variável que contem a posição em
-// x, y e z da partícula
+// Vetor que contêm as variáveis
+// x, y e z da partícula (em linha)
+// Ou seja, ele guarda {x1,y1,z1,x2,y2,z2,...,xn,yn,zn}
 double * vetor2;
-int * vetor;
 
-// função que retorna o valor aleatório de um intervaldo
-// em double
+// Função que retorna o valor aleatório
+// dentro de um intervalo definido
 double handDouble(double min, double max){
   double aux = (double)rand()/(double)RAND_MAX * (max - min) + min;
   return aux;
 }
 
-// função que inicia as posições de cada partícula
+// Função que inicia as coordenadas da partícula aleatóriamente (dentro de um intervalo definido)
+// sendo esse intervalo um plano acima da esfera
 void iniciarParticula(){
   vetor2 = malloc(sizeof(double)*3*nParticulas);
   int i;
@@ -74,7 +68,7 @@ void iniciarParticula(){
   }
 }
 
-// função que calcula a nova posição da partícula
+// Função que calcula a nova posição das partículas
 void * renderizarParticulas(){
   int i;
 
@@ -83,6 +77,7 @@ void * renderizarParticulas(){
   for(i=0;i<nParticulas;i++){
     int raio = (vetor2[i*3]*vetor2[i*3])+(vetor2[i*3+1]*vetor2[i*3+1])+(vetor2[i*3+2]*vetor2[i*3+2]);
 
+    // Verifica aonde a partícula se encontra com relação a esfera
     if(raio > 36){
       vetor2[i*3+1] =  vetor2[i*3+1] - (vetor2[i*3+1] < -9 ? 0 : handDouble(0.04,0.2));
     }else{
@@ -121,66 +116,67 @@ void * renderizarParticulas(){
       }
 
     }
-    if(vetor2[i*3+1] > -9)
-      flag = 1;
-    else
+    // Caso a partícula esteja no chão, adiciona no auxiliar quantas partículas estão no chão
+    if(vetor2[i*3+1] < -9)
       nParticulasAux++;
   }
 
+  // Caso todas as partículas estejam no chão, 
   if(nParticulasAux == nParticulas)
-    flag_final = 1;
+    Flag = 1;
 
 }
 
-// função que não permite que a imagem renderizada
-// perca a proporção quando é redimensionado manualmente
-// a janela
+// Função que não permite a perda de resolução
+// quando o usuário redimensiona a tela manualmente
 void changeSize(int w, int h) {
-  // Prevent a divide by zero, when window is too short
-  // (you cant make a window of zero width).
+  // Previne a divisão por zero quando a janela é muito pequena
+  // (não existe janelas com largura 0)
   if (h == 0)
     h = 1;
 
   float ratio =  w * 1.0 / h;
 
-  // Use the Projection Matrix
+  // Usa a matriz de Projeção
   glMatrixMode(GL_PROJECTION);
 
-  // Reset Matrix
+  // Reseta a matriz
   glLoadIdentity();
 
-  // Set the viewport to be the entire window
+  // Seta a viewport para ser a janela inteira
   glViewport(0, 0, w, h);
 
-  // Set the correct perspective.
+  // Define a perspectiva
   gluPerspective(45.0f, ratio, 0.1f, 100.0f);
 
-  // Get Back to the Modelview
+  // Volta para o ModelView
   glMatrixMode(GL_MODELVIEW);
 }
 
-// função principal para realizar a renderização
+// Função principal de renderização da imagem
 void renderScene(void) {
   char s [100];
   int i;
   void * font;
 
+  // Chama a função para renderizar as partículas
   renderizarParticulas();
 
   glEnableClientState(GL_VERTEX_ARRAY);
   glVertexPointer(3, GL_DOUBLE, 0, vetor2);
 
-  // Clear Color and Depth Buffers
+  // Limpa os Buffers de visão e cor
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
   glColor3d(1,1,1);
   glDrawArrays(GL_POINTS, 0, nParticulas);
-  // Reset transformations
+  // Reseta as transformações
   glLoadIdentity();
-  // Set the camera
+  // Define a posição da câmera
   gluLookAt(10,-7.0f, 20,
       0.0, 0.0,  0.0,
       0.0f, 1.0f,  0.0f);
 
+  // Função que faz o cálculo dos Frames por Segundo
   frame++;
   tempo = glutGet(GLUT_ELAPSED_TIME);
   if (tempo - timebase > 1000){
@@ -192,29 +188,33 @@ void renderScene(void) {
     frame++;
   }
 
+  // Troca os buffers (o atual com o antigo que fora recalculado)
   glutSwapBuffers();
 }
 
-// rotina principal
+// Rotina Principal do programa
 int main(int argc, char **argv) {
 
   double start, finish;
+  int i;
+
   if(argc != 2){
     printf("Usage: %s <number of particles>\n",argv[0]);
     return 0;
   }
 
-  // recebe o número de partículas que devem ser processadas
+  // Recebe o número de partículas que devem ser processadas
   // e posteriormente renderizadas
   nParticulas = atoi(argv[1]);
-  nParticulasAux = nParticulas;
-  int i;
 
-  // define posição inicial das particulas
+  // Define a quantidade de partículas que não estão no chão (inicialmente nenhuma delas está)
+  nParticulasAux = nParticulas;
+
+  // Define posição inicial das particulas
   iniciarParticula();
 
-  // funções necessárias para inicializar o opengl
-  // e criar a janela que ficará renderizado
+  // Funções necessárias para inicializar o OpenGL
+  // e criar a janela que ficará renderizando
   glutInit(&argc, argv);
   glutInitDisplayMode(GLUT_DEPTH | GLUT_DOUBLE | GLUT_RGBA);
   glutInitWindowPosition(100,100);
@@ -222,23 +222,32 @@ int main(int argc, char **argv) {
   glutCreateWindow("Trabalho Final - Computação Paralela");
   glEnable(GL_DEPTH_TEST);
 
+  // Inicializa a contagem do tempo
   GET_TIME(start);
 
-  // register callbacks
+  // Registrando CallBacks
   glutDisplayFunc(renderScene);
   glutReshapeFunc(changeSize);
   glutIdleFunc(renderScene);
 
-  // função que mantém o loop de renderização
-  while(!flag_final)
+  // Função que mantém o loop do evento de renderização
+  // funcionado
+  // Foi escolhido a função glutMainLoopEvent ao invés de glutMainLoop
+  // pelo simples fato de que a segunda não pára até o programa finalizar
+  // e a que escolhemos funciona como apenas uma iteração dessa função
+  while(!Flag)
   {
     glutMainLoopEvent();
     renderScene();
   }
 
+  // Finaliza o timer
   GET_TIME(finish);
 
+  // Printa o tempo
   printf("Tempo gasto: %f\n", (finish - start));
+
+  free(vetor2);
 
   return 1;
 }

@@ -5,17 +5,18 @@
 //  Marcello da Costa Marques Acar  RA: 552550
 //----------------------------------------------
 //
-// Programa Sequencial
-// para compilar:
-// gcc EfeitoParticula.c -o EfeitoParticula -lGL -lGLU -lglut -lm -lpthread
+// Programa Paralelo
 //
-// para instalar as bibliotecas necessárias
-// sudo apt-get install freeglut3-dev
+// Para compilar:
+// gcc EfeitoParticula.c -o paralelo -lGL -lGLU -lglut -lm -lpthread
 //
-// instale este aplicativo:
-// sudo apt-get install mesa-utils
-// e execute sem  vsync:
-// vblank_mode=0 ./main 1000
+// Para instalar as bibliotecas necessárias do glut utiliza-se:
+//    sudo apt-get install freeglut3-dev
+//
+// Para executar o programa sem vsync, deve-se instalar:
+//    sudo apt-get install mesa-utils
+// e executar:
+//    vblank_mode=0 ./paralelo <Número de Partículas> <Número de Threads>
 
 #include <GL/freeglut.h>
 #include <GL/gl.h>
@@ -25,44 +26,44 @@
 #include <math.h>
 #include <time.h>
 #include <pthread.h>
-#include <semaphore.h>
 
 #include "timer.h"
 
+// Definição da Estrutura que é utilizada
 typedef struct arg{
   int inicio;
   int final;
 }Arg;
 
-// número de particulas
+// Número de partículas (informado pelo usuário)
 int nParticulas;
 
-// número de threads
+// Número de threads (informado pelo usuário)
 int NTHREADS;
+
+// Variável auxiliar das threads
+// define o número de threads que finalizaram a execução
 int threadsFinalizadas = 0;
-int threadsAux = 0;
 
-sem_t bloqueio;
-
-// variáveis necessárias para realizar
-// o cálculo de fps
+// Variáveis necessárias para a realização
+// Do cálculo de Frames Per Second
 int tempo;
 int frame = 0, timebase = 0;
 
-// variável que contem a posição em
-// x, y e z da partícula
+// Vetor que contêm as variáveis
+// x, y e z da partícula (em linha)
+// Ou seja, ele guarda {x1,y1,z1,x2,y2,z2,...,xn,yn,zn}
 double * vetor2;
-int * vetor_func;
-int * vetor_id;
 
-// função que retorna o valor aleatório de um intervaldo
-// em double
+// Função que retorna o valor aleatório
+// dentro de um intervalo definido
 double handDouble(double min, double max){
   double aux = (double)rand()/(double)RAND_MAX * (max - min) + min;
   return aux;
 }
 
-// função que inicia as posições de cada partícula
+// Função que inicia as coordenadas da partícula aleatóriamente (dentro de um intervalo definido)
+// sendo esse intervalo um plano acima da esfera
 void iniciarParticula(){
   vetor2 = malloc(sizeof(double)*3*nParticulas);
   int i;
@@ -74,7 +75,7 @@ void iniciarParticula(){
   }
 }
 
-// função que calcula a nova posição da partícula
+// Função que calcula a nova posição das partículas
 void * renderizarParticulas(Arg * argumento){
   int i;
   int flag = 1;
@@ -86,6 +87,7 @@ void * renderizarParticulas(Arg * argumento){
     for(i=argumento->inicio;i<argumento->final;i++){
       int raio = (vetor2[i*3]*vetor2[i*3])+(vetor2[i*3+1]*vetor2[i*3+1])+(vetor2[i*3+2]*vetor2[i*3+2]);
 
+      // Verifica aonde a partícula se encontra com relação a esfera
       if(raio > 36){
         vetor2[i*3+1] =  vetor2[i*3+1] - (vetor2[i*3+1] < -9 ? 0 : handDouble(0.04,0.2));
       }else{
@@ -124,9 +126,9 @@ void * renderizarParticulas(Arg * argumento){
         }
 
       }
+      // Caso a partícula não esteja no chão, aciona a flag que define se o cálculo deve ser executado novamente
       if(vetor2[i*3+1] > -9)
         flag = 1;
-
     }
   }
 
@@ -135,34 +137,33 @@ void * renderizarParticulas(Arg * argumento){
   return NULL;
 }
 
-// função que não permite que a imagem renderizada
-// perca a proporção quando é redimensionado manualmente
-// a janela
+// Função que não permite a perda de resolução
+// quando o usuário redimensiona a tela manualmente
 void changeSize(int w, int h) {
-  // Prevent a divide by zero, when window is too short
-  // (you cant make a window of zero width).
+  // Previne a divisão por zero quando a janela é muito pequena
+  // (não existe janelas com largura 0)
   if (h == 0)
     h = 1;
 
   float ratio =  w * 1.0 / h;
 
-  // Use the Projection Matrix
+  // Usa a matriz de Projeção
   glMatrixMode(GL_PROJECTION);
 
-  // Reset Matrix
+  // Reseta a matriz
   glLoadIdentity();
 
-  // Set the viewport to be the entire window
+  // Seta a viewport para ser a janela inteira
   glViewport(0, 0, w, h);
 
-  // Set the correct perspective.
+  // Define a perspectiva
   gluPerspective(45.0f, ratio, 0.1f, 100.0f);
 
-  // Get Back to the Modelview
+  // Volta para o ModelView
   glMatrixMode(GL_MODELVIEW);
 }
 
-// função principal para realizar a renderização
+// Função principal de renderização da imagem
 void renderScene(void) {
   char s [100];
   int i;
@@ -171,17 +172,18 @@ void renderScene(void) {
   glEnableClientState(GL_VERTEX_ARRAY);
   glVertexPointer(3, GL_DOUBLE, 0, vetor2);
 
-  // Clear Color and Depth Buffers
+  // Limpa os Buffers de visão e cor
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
   glColor3d(1,1,1);
   glDrawArrays(GL_POINTS, 0, nParticulas);
-  // Reset transformations
+  // Reseta as transformações
   glLoadIdentity();
-  // Set the camera
+  // Define a posição da câmera
   gluLookAt(10,-7.0f, 20,
       0.0, 0.0,  0.0,
       0.0f, 1.0f,  0.0f);
 
+  // Função que faz o cálculo dos Frames por Segundo
   frame++;
   tempo = glutGet(GLUT_ELAPSED_TIME);
   if (tempo - timebase > 1000){
@@ -193,10 +195,11 @@ void renderScene(void) {
     frame++;
   }
 
+  // Troca os buffers (o atual com o antigo que fora recalculado)
   glutSwapBuffers();
 }
 
-// rotina principal
+// Rotina Principal do programa
 int main(int argc, char **argv) {
 
   double start, finish;
@@ -207,16 +210,18 @@ int main(int argc, char **argv) {
     return 0;
   }
 
-  // argumentos encapsulados para a passagem de parâmetros
+  // Argumentos encapsulados para a passagem dos parâmetros
   Arg * argumento = malloc(sizeof(Arg)*atoi(argv[2]));
 
-  // recebe o número de threads que devem ser criadas
+  // Recebe o número de threads que devem ser criadas
   NTHREADS = atoi(argv[2]);
   pthread_t * threads = malloc(sizeof(pthread_t)*NTHREADS);
 
-  // recebe o número de partículas que devem ser processadas
+  // Recebe o número de partículas que devem ser processadas
   // e posteriormente renderizadas
   nParticulas = atoi(argv[1]);
+
+  // É feita a divisão de trabalho das threads
   int divisao = nParticulas/NTHREADS;
 
   argumento[0].inicio = 0;
@@ -226,13 +231,12 @@ int main(int argc, char **argv) {
     argumento[i].inicio = argumento[i-1].final +1;
     argumento[i].final = divisao*(i+1);
   }
-  //argumento[i-1].final = nParticulas;
 
-  // define posição inicial das particulas
+  // Define posição inicial das particulas
   iniciarParticula();
 
-  // funções necessárias para inicializar o opengl
-  // e criar a janela que ficará renderizado
+  // Funções necessárias para inicializar o OpenGL
+  // e criar a janela que ficará renderizando
   glutInit(&argc, argv);
   glutInitDisplayMode(GLUT_DEPTH | GLUT_DOUBLE | GLUT_RGBA);
   glutInitWindowPosition(100,100);
@@ -240,29 +244,40 @@ int main(int argc, char **argv) {
   glutCreateWindow("Trabalho Final - Computação Paralela");
   glEnable(GL_DEPTH_TEST);
 
+  // Inicializa a contagem do tempo
   GET_TIME(start);
-  // chamada das threads
+
+  // Chamada de criação de todas as threads
+  // com a passagem dos argumentos (trabalho para cada uma delas)
   for(i=0;i<NTHREADS;i++){
     pthread_create(&threads[i], NULL, (void*)renderizarParticulas, (Arg*)&argumento[i]);
   }
 
-  // definindo as funções que devem ser executadas
-  // para uma determinada ação
+  // Registrando CallBacks
   glutReshapeFunc(changeSize);
 
-  // função que mantém o loop de renderização
+  // Função que mantêm a renderização em um loop
+  // até que os cálculos das threads sejam finalizados (partículas se encontrem no chão)
   while(NTHREADS > threadsFinalizadas)
   {
     glutMainLoopEvent();
     renderScene();
   }
 
+  // Aguarda o retorno de todas as threads que finalizaram sua execução
   for(i=0;i<NTHREADS; i++){
     pthread_join(threads[i], NULL);
   }
+
+  // Finaliza o timer
   GET_TIME(finish);
 
+  // Printa o tempo
   printf("Tempo gasto: %f\n", (finish - start));
+
+  free(argumento);
+  free(vetor2);
+  free(threads);
 
   return 1;
 }

@@ -25,6 +25,7 @@
 #include <math.h>
 #include <time.h>
 #include <pthread.h>
+#include <semaphore.h>
 
 #include "timer.h"
 
@@ -39,6 +40,9 @@ int nParticulas;
 // número de threads
 int NTHREADS;
 int threadsFinalizadas = 0;
+int threadsAux = 0;
+
+sem_t bloqueio;
 
 // variáveis necessárias para realizar
 // o cálculo de fps
@@ -48,6 +52,8 @@ int frame = 0, timebase = 0;
 // variável que contem a posição em
 // x, y e z da partícula
 double * vetor2;
+int * vetor_func;
+int * vetor_id;
 
 // função que retorna o valor aleatório de um intervaldo
 // em double
@@ -72,8 +78,20 @@ void iniciarParticula(){
 void * renderizarParticulas(Arg * argumento){
   int i;
   int flag = 1;
+  int meuID = 0;
+
+  for(i = 0; i < NTHREADS; i++)
+  {
+    if(vetor_id[i] == (int)pthread_self())
+    {
+      meuID = i;
+    }
+  }
+
   while(1 && flag){
     flag = 0;
+    vetor_func[meuID] = 0;
+
     for(i=argumento->inicio;i<argumento->final;i++){
       int raio = (vetor2[i*3]*vetor2[i*3])+(vetor2[i*3+1]*vetor2[i*3+1])+(vetor2[i*3+2]*vetor2[i*3+2]);
 
@@ -119,6 +137,9 @@ void * renderizarParticulas(Arg * argumento){
         flag = 1;
 
     }
+
+    vetor_func[meuID] = 1;
+    sem_wait(&bloqueio);
   }
 
   threadsFinalizadas++;
@@ -191,6 +212,7 @@ void renderScene(void) {
 int main(int argc, char **argv) {
 
   double start, finish;
+  int i;
 
   if(argc != 3){
     printf("Usage: %s <number of particles> <number of threads>\n",argv[0]);
@@ -203,12 +225,19 @@ int main(int argc, char **argv) {
   // recebe o número de threads que devem ser criadas
   NTHREADS = atoi(argv[2]);
   pthread_t * threads = malloc(sizeof(pthread_t)*NTHREADS);
+  vetor_func = malloc(sizeof(int)*NTHREADS);
+  vetor_id = malloc(sizeof(int)*NTHREADS);
+
+  for(i = 0; i<NTHREADS; i++)
+  {
+    vetor_func[i] = 0;
+    vetor_id[i] = 0;
+  }
 
   // recebe o número de partículas que devem ser processadas
   // e posteriormente renderizadas
   nParticulas = atoi(argv[1]);
   int divisao = nParticulas/NTHREADS;
-  int i;
 
   argumento[0].inicio = 0;
   argumento[0].final = divisao;
@@ -235,6 +264,7 @@ int main(int argc, char **argv) {
   // chamada das threads
   for(i=0;i<NTHREADS;i++){
     pthread_create(&threads[i], NULL, (void*)renderizarParticulas, (Arg*)&argumento[i]);
+    vetor_id[i] = (int)threads[i];
   }
 
   // definindo as funções que devem ser executadas
@@ -243,8 +273,28 @@ int main(int argc, char **argv) {
 
   // função que mantém o loop de renderização
   while(NTHREADS > threadsFinalizadas){
+
+    while(1)
+    {
+      threadsAux = 0;
+      for(i = 0; i < NTHREADS; i++)
+      {
+        if(vetor_func[i] == 1)
+        {
+          threadsAux++;
+        }
+      }
+
+      if(threadsAux == NTHREADS)
+      {
+        break;
+      }
+    }
+
     glutMainLoopEvent();
     renderScene();
+
+    sem_post(&bloqueio);
   }
 
   for(i=0;i<NTHREADS; i++){

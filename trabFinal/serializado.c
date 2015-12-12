@@ -1,14 +1,14 @@
 //----------------------------------------------
-//  Trabalho Final - Efeito Particula
+//  Trabalho Final - Efeito Particula 
 //  Gustavo Rodrigues Almeida       RA: 489999
 //  Henrique Teruo Eihara           RA: 490016
 //  Marcello da Costa Marques Acar  RA: 552550
 //----------------------------------------------
 //
-// Programa Paralelo
+// Programa Sequencial
 //
 // Para compilar:
-// gcc EfeitoParticula.c -o paralelo -lGL -lGLU -lglut -lm -lpthread
+// gcc serializado.c -o serial -lGL -lGLU -lglut -lm
 //
 // Para instalar as bibliotecas necessárias do glut utiliza-se:
 //    sudo apt-get install freeglut3-dev
@@ -16,7 +16,7 @@
 // Para executar o programa sem vsync, deve-se instalar:
 //    sudo apt-get install mesa-utils
 // e executar:
-//    vblank_mode=0 ./paralelo <Número de Partículas> <Número de Threads>
+//    vblank_mode=0 ./serial <Número de Partículas>
 
 #include <GL/freeglut.h>
 #include <GL/gl.h>
@@ -29,26 +29,19 @@
 
 #include "timer.h"
 
-// Definição da Estrutura que é utilizada
-typedef struct arg{
-  int inicio;
-  int final;
-}Arg;
-
 // Número de partículas (informado pelo usuário)
 int nParticulas;
 
-// Número de threads (informado pelo usuário)
-int NTHREADS;
-
-// Variável auxiliar das threads
-// define o número de threads que finalizaram a execução
-int threadsFinalizadas = 0;
+// Número auxiliar de partículas (para saber se a execução do programa chegou ao fim, ou seja, se as partículas estão no chão)
+int nParticulasAux;
 
 // Variáveis necessárias para a realização
 // Do cálculo de Frames Per Second
 int tempo;
 int frame = 0, timebase = 0;
+
+// Flag utilizadas para a finalização do programa
+int Flag = 0;
 
 // Vetor que contêm as variáveis
 // x, y e z da partícula (em linha)
@@ -70,71 +63,68 @@ void iniciarParticula(){
 
   for(i=0;i<nParticulas;i++){
     vetor2[i*3+1] = 10 + handDouble(0,30);
-    vetor2[i*3] = handDouble(-6,6) * (rand() % 2 == 0 ? 1 :-1);
-    vetor2[i*3+2] = handDouble(-6,6) * (rand() % 2 == 0 ? 1 :-1);
+    vetor2[i*3] = handDouble(-7,7) * (rand() % 2 == 0 ? 1 :-1);
+    vetor2[i*3+2] = handDouble(-7,7) * (rand() % 2 == 0 ? 1 :-1);
   }
 }
 
 // Função que calcula a nova posição das partículas
-void * renderizarParticulas(Arg * argumento){
+void * renderizarParticulas(){
   int i;
-  int flag = 1;
-  int meuID = 0;
 
-  while(1 && flag){
-    flag = 0;
+  nParticulasAux = 0;
 
-    for(i=argumento->inicio;i<argumento->final;i++){
-      int raio = (vetor2[i*3]*vetor2[i*3])+(vetor2[i*3+1]*vetor2[i*3+1])+(vetor2[i*3+2]*vetor2[i*3+2]);
+  for(i=0;i<nParticulas;i++){
+    int raio = (vetor2[i*3]*vetor2[i*3])+(vetor2[i*3+1]*vetor2[i*3+1])+(vetor2[i*3+2]*vetor2[i*3+2]);
 
-      // Verifica aonde a partícula se encontra com relação a esfera
-      if(raio > 36){
-        vetor2[i*3+1] =  vetor2[i*3+1] - (vetor2[i*3+1] < -9 ? 0 : handDouble(0.04,0.2));
-      }else{
-        vetor2[i*3+1] =  vetor2[i*3+1] - (vetor2[i*3+1] < -9 ? 0 : handDouble(0.04,0.04));
-        if (vetor2[i*3] > 0){
-          vetor2[i*3] = vetor2[i*3] + handDouble(0,0.1);
-          if(vetor2[i*3+2] == 0)
-            vetor2[i*3+2] = 0;
-          else{
-            if (vetor2[i*3+2] > 0)
-              vetor2[i*3+2] = vetor2[i*3+2] + handDouble(0,0.1);
-            else
-              vetor2[i*3+2] = vetor2[i*3+2] - handDouble(0,0.1);
-          }
-        }
-        else if (vetor2[i*3] < 0){
-          vetor2[i*3] = vetor2[i*3] - handDouble(0,0.1);
-          if(vetor2[i*3+2] == 0)
-            vetor2[i*3+2] = 0;
-          else{
-            if (vetor2[i*3+2] > 0)
-              vetor2[i*3+2] = vetor2[i*3+2] + handDouble(0,0.1);
-            else
-              vetor2[i*3+2] = vetor2[i*3+2] - handDouble(0,0.1);
-          }
-        }
+    // Verifica aonde a partícula se encontra com relação a esfera
+    if(raio > 36){
+      vetor2[i*3+1] =  vetor2[i*3+1] - (vetor2[i*3+1] < -9 ? 0 : handDouble(0.04,0.2));
+    }else{
+      vetor2[i*3+1] =  vetor2[i*3+1] - (vetor2[i*3+1] < -9 ? 0 : handDouble(0.04,0.04));
+      if (vetor2[i*3] > 0){
+        vetor2[i*3] = vetor2[i*3] + handDouble(0,0.1);
+        if(vetor2[i*3+2] == 0)
+          vetor2[i*3+2] = 0;
         else{
-          if(vetor2[i*3+2] == 0)
-            vetor2[i*3] = 0;
-          else{
-            if (vetor2[i*3+2] > 0)
-              vetor2[i*3+2] = vetor2[i*3+2] + handDouble(0,0.1);
-            else
-              vetor2[i*3+2] = vetor2[i*3+2] - handDouble(0,0.1);
-          }
+          if (vetor2[i*3+2] > 0)
+            vetor2[i*3+2] = vetor2[i*3+2] + handDouble(0,0.1);
+          else
+            vetor2[i*3+2] = vetor2[i*3+2] - handDouble(0,0.1);
         }
-
       }
-      // Caso a partícula não esteja no chão, aciona a flag que define se o cálculo deve ser executado novamente
-      if(vetor2[i*3+1] > -9)
-        flag = 1;
+      else if (vetor2[i*3] < 0){
+        vetor2[i*3] = vetor2[i*3] - handDouble(0,0.1);
+        if(vetor2[i*3+2] == 0)
+          vetor2[i*3+2] = 0;
+        else{
+          if (vetor2[i*3+2] > 0)
+            vetor2[i*3+2] = vetor2[i*3+2] + handDouble(0,0.1);
+          else
+            vetor2[i*3+2] = vetor2[i*3+2] - handDouble(0,0.1);
+        }
+      }
+      else{
+        if(vetor2[i*3+2] == 0)
+          vetor2[i*3] = 0;
+        else{
+          if (vetor2[i*3+2] > 0)
+            vetor2[i*3+2] = vetor2[i*3+2] + handDouble(0,0.1);
+          else
+            vetor2[i*3+2] = vetor2[i*3+2] - handDouble(0,0.1);
+        }
+      }
+
     }
+    // Caso a partícula esteja no chão, adiciona no auxiliar quantas partículas estão no chão
+    if(vetor2[i*3+1] < -9)
+      nParticulasAux++;
   }
 
-  threadsFinalizadas++;
+  // Caso todas as partículas estejam no chão, 
+  if(nParticulasAux == nParticulas)
+    Flag = 1;
 
-  return NULL;
 }
 
 // Função que não permite a perda de resolução
@@ -168,6 +158,9 @@ void renderScene(void) {
   char s [100];
   int i;
   void * font;
+
+  // Chama a função para renderizar as partículas
+  renderizarParticulas();
 
   glEnableClientState(GL_VERTEX_ARRAY);
   glVertexPointer(3, GL_DOUBLE, 0, vetor2);
@@ -205,32 +198,17 @@ int main(int argc, char **argv) {
   double start, finish;
   int i;
 
-  if(argc != 3){
-    printf("Usage: %s <number of particles> <number of threads>\n",argv[0]);
+  if(argc != 2){
+    printf("Usage: %s <number of particles>\n",argv[0]);
     return 0;
   }
-
-  // Argumentos encapsulados para a passagem dos parâmetros
-  Arg * argumento = malloc(sizeof(Arg)*atoi(argv[2]));
-
-  // Recebe o número de threads que devem ser criadas
-  NTHREADS = atoi(argv[2]);
-  pthread_t * threads = malloc(sizeof(pthread_t)*NTHREADS);
 
   // Recebe o número de partículas que devem ser processadas
   // e posteriormente renderizadas
   nParticulas = atoi(argv[1]);
 
-  // É feita a divisão de trabalho das threads
-  int divisao = nParticulas/NTHREADS;
-
-  argumento[0].inicio = 0;
-  argumento[0].final = divisao;
-
-  for(i=1;i<NTHREADS;i++){
-    argumento[i].inicio = argumento[i-1].final +1;
-    argumento[i].final = divisao*(i+1);
-  }
+  // Define a quantidade de partículas que não estão no chão (inicialmente nenhuma delas está)
+  nParticulasAux = nParticulas;
 
   // Define posição inicial das particulas
   iniciarParticula();
@@ -247,26 +225,20 @@ int main(int argc, char **argv) {
   // Inicializa a contagem do tempo
   GET_TIME(start);
 
-  // Chamada de criação de todas as threads
-  // com a passagem dos argumentos (trabalho para cada uma delas)
-  for(i=0;i<NTHREADS;i++){
-    pthread_create(&threads[i], NULL, (void*)renderizarParticulas, (Arg*)&argumento[i]);
-  }
-
   // Registrando CallBacks
+  glutDisplayFunc(renderScene);
   glutReshapeFunc(changeSize);
+  glutIdleFunc(renderScene);
 
-  // Função que mantêm a renderização em um loop
-  // até que os cálculos das threads sejam finalizados (partículas se encontrem no chão)
-  while(NTHREADS > threadsFinalizadas)
+  // Função que mantém o loop do evento de renderização
+  // funcionado
+  // Foi escolhido a função glutMainLoopEvent ao invés de glutMainLoop
+  // pelo simples fato de que a segunda não pára até o programa finalizar
+  // e a que escolhemos funciona como apenas uma iteração dessa função
+  while(!Flag)
   {
     glutMainLoopEvent();
     renderScene();
-  }
-
-  // Aguarda o retorno de todas as threads que finalizaram sua execução
-  for(i=0;i<NTHREADS; i++){
-    pthread_join(threads[i], NULL);
   }
 
   // Finaliza o timer
@@ -275,9 +247,7 @@ int main(int argc, char **argv) {
   // Printa o tempo
   printf("Tempo gasto: %f\n", (finish - start));
 
-  free(argumento);
   free(vetor2);
-  free(threads);
 
   return 1;
 }
